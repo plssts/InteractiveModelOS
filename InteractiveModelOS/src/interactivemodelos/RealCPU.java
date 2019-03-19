@@ -3,6 +3,7 @@
 package interactivemodelos;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 
 /**
  * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
@@ -15,7 +16,11 @@ public class RealCPU {
     }
     
     public void setPTR(int value){
-        PTR.setValue("00" + Integer.toString(value));
-        System.out.println("PTR to " + value);
+        String sigByte = value < 16 ? "0" : ""; // Jeigu PTR yra 0-F
+        PTR.setValue("00" + sigByte + Integer.toHexString(value));
+    }
+    
+    public StringProperty ptrProperty(){
+        return PTR;
     }
 }
