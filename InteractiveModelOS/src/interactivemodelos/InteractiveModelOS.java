@@ -13,70 +13,95 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
 public class InteractiveModelOS extends Application {
-    GridPane vmMem = new GridPane();
     Button button2 = new Button();
 
     @Override
     public void start(Stage primaryStage) {
         // Pagrindinis pane, laikantis visus elementus
         BorderPane root = new BorderPane();
-        root.setMaxSize(1200, 800);
-        root.setMinSize(1200, 800);
+        root.setMaxSize(1400, 800);
+        root.setMinSize(1400, 800);
         
         // Reali masina
         RealMachine rm = new RealMachine();
+        // Virtuali masina
+        VirtualMachine vm = new VirtualMachine();
+        // Realus procesorius
+        RealCPU rcpu = new RealCPU();
+        // Virtualus procesorius
+        VirtualCPU vcpu = new VirtualCPU();
         
-        // Kairinio pane objektu laikykle
-        VBox leftOrganized = new VBox();
-        Label rmemLabel = new Label("Reali atmintis");
-        rmemLabel.setTextFill(Color.RED);
-        leftOrganized.getChildren().add(rmemLabel);
-        
-        Label wordLabel = new Label(String.format("%5s%8s%9s%8s%8s%8s%8s%8s%8s%8s%9s%8s%8s%8s%8s%8s",
-                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"));
-        wordLabel.setTextFill(Color.DARKCYAN);
-        leftOrganized.getChildren().add(wordLabel);
+        // Virtualios masinos uzkurimas
+        rm.loadVirtualMachine(rcpu);
         
         // RM atminties pane
         GridPane rmMem = new GridPane();
         rmMem.gridLinesVisibleProperty().setValue(Boolean.TRUE);
-        //rmMem.setMaxHeight(1000);
+        
+        // VM atminties pane
+        GridPane vmMem = new GridPane();
+        vmMem.gridLinesVisibleProperty().setValue(Boolean.TRUE);
+        
+        // Nustatymai rmMem ir vmMem stulpeliams
         for (int i = 0; i < 16; ++i){
             ColumnConstraints column = new ColumnConstraints();
-            column.setMinWidth(30);
-            column.setMaxWidth(30);
+            column.setMinWidth(58);
+            column.setMaxWidth(58);
             column.setHalignment(HPos.CENTER);
             rmMem.getColumnConstraints().add(column);
+            vmMem.getColumnConstraints().add(column);
         }
-        
-        vmMem.gridLinesVisibleProperty().setValue(Boolean.TRUE);
 
+        // Realios atminties zodziai
         for (int block = 0; block < 64; ++block){
             for (int word = 0; word < 16; ++word){
                 Label temp = new Label("label");
-                temp.textProperty().bind(rm.wordProperty());
-                // reikes gettint property is 2d properciu masyvo pagal indeksus
+                //temp.setFont(new Font(12));
+                //System.out.println("Binding " + block + " " + word);
+                        
+                temp.textProperty().bind(rm.memoryProperty(block, word));
                 rmMem.add(temp, word, block);
-                vmMem.add(new Label("label"), word, block);
             }
+            
+            // Papildomas stulpelis bloko numeriams
             Label blockNum = new Label(Integer.toHexString(block));
+            //blockNum.setFont(new Font(12));
             blockNum.setTextFill(Color.TEAL);
             rmMem.add(blockNum, 17, block);
+        }
+        
+        // Virtualios atminties zodziai
+        for (int block = 0; block < 16; ++block){
+            for (int word = 0; word < 16; ++word){
+                Label temp = new Label("label");
+                //temp.setFont(new Font(12));
+                //System.out.println("Binding " + block + " " + word);
+                        
+                temp.textProperty().bind(vm.memoryProperty(block, word));
+                vmMem.add(temp, word, block);
+            }
+            
+            // Papildomas stulpelis bloko numeriams
+            Label blockNum = new Label(Integer.toHexString(block));
+            //blockNum.setFont(new Font(12));
+            blockNum.setTextFill(Color.TEAL);
+            vmMem.add(blockNum, 17, block);
         }
         
         Button startProg = new Button("Paleisti programa");
         startProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                System.out.println("HANDLE");
-                rm.setWord(String.valueOf(Integer.toHexString(new Random().nextInt(16))) + "e" + String.valueOf(Integer.toHexString(new Random().nextInt(16))) + "d");
+                rm.setWord(0,0,String.valueOf(Integer.toHexString(new Random().nextInt(16))) + "e15" + String.valueOf(Integer.toHexString(new Random().nextInt(16))) + "57d");
             }
         });
         
@@ -91,29 +116,68 @@ public class InteractiveModelOS extends Application {
             }
         });
         
-        button2.setOnAction(new EventHandler<ActionEvent>() {
+        /*button2.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 System.out.println("button 2");
             }
         });
-        vmMem.getChildren().add(button2);
+        vmMem.getChildren().add(button2);*/
         
-        ScrollPane memScroll = new ScrollPane(rmMem);
-        memScroll.setContent(rmMem);
-        memScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        //root.setLeft(rmMem);
-        leftOrganized.getChildren().add(memScroll);
-        leftOrganized.getChildren().add(startProg);
-        leftOrganized.getChildren().add(loadProg);
+        // Kairinio pane objektu laikykle
+        VBox leftOrganized = new VBox();
+        Label rmemLabel = new Label("Reali atmintis");
+        rmemLabel.setTextFill(Color.RED);
+        leftOrganized.getChildren().add(rmemLabel);
+        
+        Label wordLabel = new Label(String.format("%5s%8s%9s%8s%8s%8s%8s%8s%8s%8s%9s%8s%8s%8s%8s%8s",
+                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"));
+        wordLabel.setTextFill(Color.DARKCYAN);
+        leftOrganized.getChildren().add(wordLabel);
+        
+        // Scrollable reali atmintis
+        ScrollPane rmemScroll = new ScrollPane(rmMem);
+        rmemScroll.setMaxHeight(450);
+        rmemScroll.setMinHeight(450);
+        
+        // Scrollable virtuali atmintis
+        ScrollPane vmemScroll = new ScrollPane(vmMem);
+        vmemScroll.setMaxHeight(150);
+        vmemScroll.setMinHeight(150);
+        
+        rmemScroll.setContent(rmMem);
+        vmemScroll.setContent(vmMem);
+        rmemScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        vmemScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        
+        leftOrganized.getChildren().add(rmemScroll);
+        Label vmemLabel = new Label("Virtuali atmintis");
+        vmemLabel.setTextFill(Color.RED);
+        leftOrganized.getChildren().add(vmemLabel);
+        
+        // Reikia naujo objekto, kitaip duplicate child exception
+        wordLabel = new Label(String.format("%5s%8s%9s%8s%8s%8s%8s%8s%8s%8s%9s%8s%8s%8s%8s%8s",
+                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"));
+        wordLabel.setTextFill(Color.DARKCYAN);
+        leftOrganized.getChildren().add(wordLabel);
+        leftOrganized.getChildren().add(vmemScroll);
+        
+        // Desininio pane objektu laikykle
+        VBox rightOrganized = new VBox();
+        //wordLabel = new Label(String.format("%5s%8s%9s%8s%8s%8s%8s%8s%8s%8s%9s%8s%8s%8s%8s%8s",
+        //       "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"));
+        //wordLabel.setTextFill(Color.DARKCYAN);
+
+        rightOrganized.getChildren().add(startProg);
+        rightOrganized.getChildren().add(loadProg);
         //StackPane.setAlignment(rmemLabel, Pos.TOP_LEFT);
-        //StackPane.setAlignment(memScroll, Pos.CENTER_LEFT);
-        //root.setLeft(memScroll);
+        //rightOrganized.getChildren().add(vmMem);
+        //root.setLeft(rmemScroll);
         root.setLeft(leftOrganized);
-        root.setRight(vmMem);
+        root.setRight(rightOrganized);
         //root.setCenter(startProg);
         
-        Scene scene = new Scene(root, 1200, 800);
+        Scene scene = new Scene(root, 1400, 800);
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);
         primaryStage.show();
