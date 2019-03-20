@@ -10,9 +10,11 @@ import javafx.beans.property.StringProperty;
  */
 public class RealCPU {
     private SimpleStringProperty PTR;
+    private SimpleStringProperty PC;
     
     public RealCPU(){
         PTR = new SimpleStringProperty("0");
+        PC = new SimpleStringProperty("0");
     }
     
     public void setPTR(int value){
@@ -20,7 +22,16 @@ public class RealCPU {
         PTR.setValue("00" + sigByte + Integer.toHexString(value));
     }
     
+    public void setPC(int value){
+        String sigByte = value < 16 ? "0" : ""; // Jeigu PC yra 0-F
+        PC.setValue(sigByte + Integer.toHexString(value));
+    }
+    
     public StringProperty ptrProperty(){
         return PTR;
+    }
+    
+    public StringProperty pcProperty(){
+        return PC;
     }
 }

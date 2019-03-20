@@ -6,6 +6,7 @@ import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -95,7 +96,25 @@ public class InteractiveModelOS extends Application {
         startProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                rm.setWord(0,0,String.valueOf(Integer.toHexString(new Random().nextInt(16))) + "e15" + String.valueOf(Integer.toHexString(new Random().nextInt(16))) + "57d");
+                while(vm.executeCommand(vcpu)){
+                    //
+                }
+            }
+        });
+        
+        Button step = new Button("Vykdyti zingsni");
+        step.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                vm.executeCommand(vcpu);
+            }
+        });
+        
+        Button reset = new Button("Atstatyti programa");
+        reset.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                //set PC back to 0 later
             }
         });
         
@@ -116,10 +135,23 @@ public class InteractiveModelOS extends Application {
         // Realaus procesoriaus pane
         HBox rcpuData = new HBox();
         rcpuData.setStyle("-fx-border-style: solid inside;");
-        Label ptr = new Label("PTR");    
+        rcpuData.setSpacing(10);
+        Label ptr = new Label();    
         ptr.textProperty().bind(rcpu.ptrProperty());
         rcpuData.getChildren().add(new Label("PTR "));
         rcpuData.getChildren().add(ptr);
+        Label pc = new Label("PC");    
+        pc.textProperty().bind(rcpu.pcProperty());
+        rcpuData.getChildren().add(new Label("| PC "));
+        rcpuData.getChildren().add(pc);
+        
+        // Virtualaus procesoriaus pane
+        HBox vcpuData = new HBox();
+        vcpuData.setStyle("-fx-border-style: solid inside;");   
+        Label vpc = new Label();    
+        vpc.textProperty().bind(vcpu.pcProperty());
+        vcpuData.getChildren().add(new Label("PC "));
+        vcpuData.getChildren().add(vpc);
         
         // Kairinio pane objektu laikykle
         VBox leftOrganized = new VBox();
@@ -127,7 +159,7 @@ public class InteractiveModelOS extends Application {
         rmemLabel.setTextFill(Color.RED);
         leftOrganized.getChildren().add(rmemLabel);
         
-        Label wordLabel = new Label(String.format("%5s%8s%9s%8s%8s%8s%8s%8s%8s%8s%9s%8s%8s%8s%8s%8s",
+        Label wordLabel = new Label(String.format("%9s%17s%17s%17s%16s%17s%17s%16s%16s%17s%17s%17s%17s%16s%17s%17s",
                 "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"));
         wordLabel.setTextFill(Color.DARKCYAN);
         leftOrganized.getChildren().add(wordLabel);
@@ -153,7 +185,7 @@ public class InteractiveModelOS extends Application {
         leftOrganized.getChildren().add(vmemLabel);
         
         // Reikia naujo objekto, kitaip duplicate child exception
-        wordLabel = new Label(String.format("%5s%8s%9s%8s%8s%8s%8s%8s%8s%8s%9s%8s%8s%8s%8s%8s",
+        wordLabel = new Label(String.format("%9s%17s%17s%17s%16s%17s%17s%16s%16s%17s%17s%17s%17s%16s%17s%17s",
                 "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"));
         wordLabel.setTextFill(Color.DARKCYAN);
         leftOrganized.getChildren().add(wordLabel);
@@ -164,11 +196,17 @@ public class InteractiveModelOS extends Application {
         
         Label rcpuLabel = new Label("Realus procesorius");
         rcpuLabel.setTextFill(Color.RED);
+        Label vcpuLabel = new Label("Virtualus procesorius");
+        vcpuLabel.setTextFill(Color.RED);
 
         rightOrganized.getChildren().add(startProg);
+        rightOrganized.getChildren().add(step);
         rightOrganized.getChildren().add(loadProg);
+        rightOrganized.getChildren().add(reset);
         rightOrganized.getChildren().add(rcpuLabel);
         rightOrganized.getChildren().add(rcpuData);
+        rightOrganized.getChildren().add(vcpuLabel);
+        rightOrganized.getChildren().add(vcpuData);
 
         root.setLeft(leftOrganized);
         root.setRight(rightOrganized);

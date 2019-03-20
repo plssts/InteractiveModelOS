@@ -16,6 +16,7 @@ import javafx.beans.property.StringProperty;
  */
 public class VirtualMachine {
     private int ptr = 0;
+    private Assembly ass;
     private final SimpleStringProperty[][] memory = new SimpleStringProperty[16][16];
     
     public VirtualMachine(){ 
@@ -26,10 +27,10 @@ public class VirtualMachine {
                 memory[i][j] = new SimpleStringProperty("0");
             }
         }
+        ass = new Assembly();
     }
     
     public void loadProgram(File file){
-        Assembly ass = new Assembly();
         ArrayList<String> commands = null;
         
         try {
@@ -57,6 +58,55 @@ public class VirtualMachine {
                 ++block;
             }
         }
+    }
+    
+    public boolean executeCommand(VirtualCPU vcpu){
+        int pc = Integer.parseInt(vcpu.pcProperty().getValue(), 16);
+        int pcBlock = pc / 16;
+        int pcWord = pc % 16;
+        String position = memory[pcBlock][pcWord].getValue();
+        System.out.println(position);
+        
+        switch(position){
+            case "ADD ":
+                
+            case "SUB ":
+                
+            case "CMP ":
+                
+            case "MUL ":
+                
+            case "DIV ":
+                
+            case "MOD ":
+                
+            case "MOV ":
+                
+            case "MOVC":
+                
+            case "JEQL":
+                
+            case "JAEQ":
+                
+            case "JBEQ":
+                
+            case "JABV":
+                
+            case "JBLW":
+                
+            case "SHW ":
+                
+            case "SHR ":
+                
+            case "HALT":
+                
+        }
+        
+        if (position.equals("HALT")){
+            return false;
+        }
+        vcpu.setPC(pc+1);
+        return true;
     }
     
     public void setWord(int block, int word, String value) {

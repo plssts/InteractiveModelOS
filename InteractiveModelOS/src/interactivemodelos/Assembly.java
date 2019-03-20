@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import javafx.beans.property.SimpleStringProperty;
 
 /**
  * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
