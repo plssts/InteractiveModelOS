@@ -211,14 +211,93 @@ public class VirtualMachine {
                 return true;
                 
             case "SUB ":
-                // cia carry flag tada, jei pirmas operandas buvo mazesnis uz antraji
-                break;
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16);
+                pcWord = pc % 16;
+                registers = memory[pcBlock][pcWord].get();
+                first = null; second = null;
+                switch (registers.substring(0, 2)){ // rezultato registras
+                    case "AX":
+                        first = vcpu.axProperty();
+                        break;
+                    case "BX":
+                        first = vcpu.bxProperty();
+                        break;
+                    default:
+                        throw new IOException("Neegzistuojantys SUB registrai");
+                }
+                switch (registers.substring(2, 4)){ // antrasis operandas
+                    case "AX":
+                        second = vcpu.axProperty();
+                        break;
+                    case "BX":
+                        second = vcpu.bxProperty();
+                        break;
+                    default:
+                        throw new IOException("Neegzistuojantys SUB registrai");
+                }
+                result = Integer.parseInt(first.get(), 16) - Integer.parseInt(second.get(), 16);
+                sign = false; zero = false; carry = false;
+                if (Integer.parseInt(first.get(), 16) < Integer.parseInt(second.get(), 16)){
+                    carry = true;
+                }
+                if (result == 0){
+                    zero = true;
+                }
+                if (result < 0){
+                    sign = true;
+                }
+                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                first.setValue(Integer.toHexString(result));
+                vcpu.setPC(pc+1);
+                return true;
                 
             case "CMP ":
                 break;
                 
             case "MUL ":
-                break;
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16);
+                pcWord = pc % 16;
+                registers = memory[pcBlock][pcWord].get();
+                first = null; second = null;
+                switch (registers.substring(0, 2)){ // rezultato registras
+                    case "AX":
+                        first = vcpu.axProperty();
+                        break;
+                    case "BX":
+                        first = vcpu.bxProperty();
+                        break;
+                    default:
+                        throw new IOException("Neegzistuojantys MUL registrai");
+                }
+                switch (registers.substring(2, 4)){ // antrasis operandas
+                    case "AX":
+                        second = vcpu.axProperty();
+                        break;
+                    case "BX":
+                        second = vcpu.bxProperty();
+                        break;
+                    default:
+                        throw new IOException("Neegzistuojantys MUL registrai");
+                }
+                result = Integer.parseInt(first.get(), 16) * Integer.parseInt(second.get(), 16);
+                sign = false; zero = false; carry = false;
+                if (result < Integer.parseInt(first.get(), 16) || result < Integer.parseInt(second.get(), 16)){
+                    carry = true;
+                }
+                if (result == 0){
+                    zero = true;
+                }
+                if (result < 0){
+                    sign = true;
+                }
+                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                first.setValue(Integer.toHexString(result));
+                vcpu.setPC(pc+1);
+                return true;
                 
             case "DIV ":
                 break;
