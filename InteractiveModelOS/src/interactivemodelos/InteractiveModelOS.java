@@ -51,13 +51,7 @@ public class InteractiveModelOS extends Application {
         VirtualCPU vcpu = new VirtualCPU();
         
         // Ivesties ir isvesties irenginiai
-        //HBox Idevice = new HBox();
-        //TextField stdin = new TextField();
-        //TextInputDialog dialog = new TextInputDialog();
-        //System.out.println(dialog.getEditor().getProperties().keySet());
         TextField stdout = new TextField();
-        //stdin.setMinSize(500, 30);
-        //stdin.setMaxSize(500, 30);
         stdout.setMinSize(500, 30);
         stdout.setMaxSize(500, 30);
         stdout.setEditable(false);
@@ -67,11 +61,6 @@ public class InteractiveModelOS extends Application {
         stdinStatus.setTextFill(Color.DARKRED);
         Label stdoutLabel = new Label("Isvesties irenginys");
         stdoutLabel.setTextFill(Color.RED);
-        //Button input = new Button("Ivesti");
-        //input.setDisable(true);
-        //Idevice.getChildren().add(stdin);
-        //Idevice.getChildren().add(dialog.getEditor());
-        //Idevice.getChildren().add(input);
         
         // Virtualios masinos uzkurimas
         System.out.println("Kuriama VM");

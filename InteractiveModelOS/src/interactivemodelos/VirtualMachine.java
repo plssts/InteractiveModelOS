@@ -85,10 +85,22 @@ public class VirtualMachine {
         System.out.println(position);
         
         if (position.startsWith("J+")){
-            
+            int offset = Integer.parseInt(position.substring(2, 4), 16);
+            if ((pc + offset + 2) / 16 >= 16){
+                // pc 'islekia' is virtualios atminties reziu
+                return false;
+            }
+            vcpu.setPC(pc + offset + 2);
+            return true;
         }
         if (position.startsWith("J-")){
-            
+            int offset = Integer.parseInt(position.substring(2, 4), 16);
+            if ((pc - offset + 2) / 16 <= 1){
+                // pc atsiduria DATA segmente
+                return false;
+            }
+            vcpu.setPC(pc - offset + 2);
+            return true;
         }
         
         if (position.startsWith("WW")){
@@ -156,34 +168,90 @@ public class VirtualMachine {
         
         switch(position){
             case "ADD ":
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16);
+                pcWord = pc % 16;
+                String registers = memory[pcBlock][pcWord].get();
+                StringProperty first = null, second = null;
+                switch (registers.substring(0, 2)){ // rezultato registras
+                    case "AX":
+                        first = vcpu.axProperty();
+                        break;
+                    case "BX":
+                        first = vcpu.bxProperty();
+                        break;
+                    default:
+                        throw new IOException("Neegzistuojantys ADD registrai");
+                }
+                switch (registers.substring(2, 4)){ // antrasis operandas
+                    case "AX":
+                        second = vcpu.axProperty();
+                        break;
+                    case "BX":
+                        second = vcpu.bxProperty();
+                        break;
+                    default:
+                        throw new IOException("Neegzistuojantys ADD registrai");
+                }
+                int result = Integer.parseInt(first.get(), 16) + Integer.parseInt(second.get(), 16);
+                boolean sign = false, zero = false, carry = false;
+                if (result < Integer.parseInt(first.get(), 16) || result < Integer.parseInt(second.get(), 16)){
+                    carry = true;
+                }
+                if (result == 0){
+                    zero = true;
+                }
+                if (result < 0){
+                    sign = true;
+                }
+                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                first.setValue(Integer.toHexString(result));
+                vcpu.setPC(pc+1);
+                return true;
                 
             case "SUB ":
+                // cia carry flag tada, jei pirmas operandas buvo mazesnis uz antraji
+                break;
                 
             case "CMP ":
+                break;
                 
             case "MUL ":
+                break;
                 
             case "DIV ":
+                break;
                 
             case "MOD ":
+                break;
                 
             case "MOV ":
+                break;
                 
             case "MOVC":
+                break;
                 
             case "JEQL":
+                break;
                 
             case "JAEQ":
+                break;
                 
             case "JBEQ":
+                break;
                 
             case "JABV":
+                break;
                 
             case "JBLW":
+                break;
                 
             case "SHW ":
+                break;
                 
             case "SHR ":
+                break;
                 
             case "HALT":
                 return false;
@@ -191,6 +259,12 @@ public class VirtualMachine {
         
         vcpu.setPC(pc+1);
         return true;
+    }
+    
+    private String arrangeFlags(boolean sign, boolean zero, boolean carry){
+        return sign && zero && carry ? "d" : zero && sign && !carry ? "c" : zero && carry && !sign ? "9" :
+                sign && carry && !zero ? "5" : !sign && !zero && !carry ? "0" : carry && !zero && !sign ? "1" :
+                zero && !carry && !sign ? "8" : "4";
     }
     
     public void setWord(int block, int word, String value) {

@@ -26,9 +26,16 @@ public class VirtualCPU {
         PC.setValue(sigByte + Integer.toHexString(value));
     }
     
-    public void setSF(int value){
-        //String sigByte = value < 16 ? "0" : ""; // Jeigu PC yra 0-F
-        //PC.setValue(sigByte + Integer.toHexString(value));
+    public void setSF(int value){ // galbut nereikalingas metodas
+        // galimos reiksmes:    D: 00001101 ZSC / C: 00001100 ZS / 9: 00001001 ZC / 5: 00000101 SC
+        //                      0: 00000000 - / 1: 00000001 C / 8: 00001000 Z / 4: 00000100 S
+        String val = Integer.toHexString(value);
+        if (!val.equals("d") && !val.equals("c") && !val.equals("9") && !val.equals("5") && 
+            !val.equals("0") && !val.equals("1") && !val.equals("8") && !val.equals("4")){
+            //bloga reiksme
+        } else {
+            SF.setValue(val);
+        }
     }
     
     public StringProperty pcProperty(){
