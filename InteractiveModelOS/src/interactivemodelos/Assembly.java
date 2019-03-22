@@ -30,7 +30,7 @@ public class Assembly {
             
             if (line.equals("CODE")){
                 if (!parseData){
-                    throw new IOException("DATA must come before CODE.");
+                    throw new IOException("DATA irasoma pries CODE.");
                 }
             }
             
@@ -67,7 +67,7 @@ public class Assembly {
             }
             else { // Cia argumentas - skaicius signed int is 8 simboliu
                 if (wordCount > 1){
-                    throw new IOException("Use 1 w for constants.");
+                    throw new IOException("Naudoti 1 w konstantoms");
                 }
                 
                 commands.add(line.split("w")[1].trim());
@@ -78,7 +78,7 @@ public class Assembly {
     
     private void parseCode(BufferedReader br, ArrayList commands) throws IOException{
         if (!parseCodeGracefully){
-            throw new IOException("Something is wrong with source code formatting");
+            throw new IOException("Neteisingas programos formatavimas");
         }
         
         String line;

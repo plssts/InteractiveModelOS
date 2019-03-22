@@ -1,16 +1,26 @@
 package interactivemodelos;
 
+import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
@@ -39,6 +49,29 @@ public class InteractiveModelOS extends Application {
         RealCPU rcpu = new RealCPU();
         // Virtualus procesorius
         VirtualCPU vcpu = new VirtualCPU();
+        
+        // Ivesties ir isvesties irenginiai
+        //HBox Idevice = new HBox();
+        //TextField stdin = new TextField();
+        //TextInputDialog dialog = new TextInputDialog();
+        //System.out.println(dialog.getEditor().getProperties().keySet());
+        TextField stdout = new TextField();
+        //stdin.setMinSize(500, 30);
+        //stdin.setMaxSize(500, 30);
+        stdout.setMinSize(500, 30);
+        stdout.setMaxSize(500, 30);
+        stdout.setEditable(false);
+        Label stdinLabel = new Label("Ivesties irenginys");
+        stdinLabel.setTextFill(Color.RED);
+        Label stdinStatus = new Label("NEAKTYVUS");
+        stdinStatus.setTextFill(Color.DARKRED);
+        Label stdoutLabel = new Label("Isvesties irenginys");
+        stdoutLabel.setTextFill(Color.RED);
+        //Button input = new Button("Ivesti");
+        //input.setDisable(true);
+        //Idevice.getChildren().add(stdin);
+        //Idevice.getChildren().add(dialog.getEditor());
+        //Idevice.getChildren().add(input);
         
         // Virtualios masinos uzkurimas
         System.out.println("Kuriama VM");
@@ -96,8 +129,12 @@ public class InteractiveModelOS extends Application {
         startProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                while(vm.executeCommand(vcpu)){
-                    //
+                try {
+                    while(vm.executeCommand(vcpu, stdinStatus, stdout)){
+                        //
+                    }
+                } catch (IOException ex) {
+                    //blogas formatavimas
                 }
             }
         });
@@ -106,7 +143,11 @@ public class InteractiveModelOS extends Application {
         step.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                vm.executeCommand(vcpu);
+                try {
+                    vm.executeCommand(vcpu, stdinStatus, stdout);
+                } catch (IOException ex) {
+                    //blogas formatavimas
+                }
             }
         });
         
@@ -114,7 +155,8 @@ public class InteractiveModelOS extends Application {
         reset.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                //set PC back to 0 later
+                vcpu.setPC(0);
+                stdout.setText("");
             }
         });
         
@@ -147,11 +189,24 @@ public class InteractiveModelOS extends Application {
         
         // Virtualaus procesoriaus pane
         HBox vcpuData = new HBox();
-        vcpuData.setStyle("-fx-border-style: solid inside;");   
+        vcpuData.setStyle("-fx-border-style: solid inside;");  
+        vcpuData.setSpacing(10);
         Label vpc = new Label();    
         vpc.textProperty().bind(vcpu.pcProperty());
         vcpuData.getChildren().add(new Label("PC "));
         vcpuData.getChildren().add(vpc);
+        Label vax = new Label();    
+        vax.textProperty().bind(vcpu.axProperty());
+        vcpuData.getChildren().add(new Label("| AX "));
+        vcpuData.getChildren().add(vax);
+        Label vbx = new Label();    
+        vbx.textProperty().bind(vcpu.bxProperty());
+        vcpuData.getChildren().add(new Label("| BX "));
+        vcpuData.getChildren().add(vbx);
+        Label vsf = new Label();    
+        vsf.textProperty().bind(vcpu.sfProperty());
+        vcpuData.getChildren().add(new Label("| SF "));
+        vcpuData.getChildren().add(vsf);
         
         // Kairinio pane objektu laikykle
         VBox leftOrganized = new VBox();
@@ -190,6 +245,10 @@ public class InteractiveModelOS extends Application {
         wordLabel.setTextFill(Color.DARKCYAN);
         leftOrganized.getChildren().add(wordLabel);
         leftOrganized.getChildren().add(vmemScroll);
+        leftOrganized.getChildren().add(stdinLabel);
+        leftOrganized.getChildren().add(stdinStatus);
+        leftOrganized.getChildren().add(stdoutLabel);
+        leftOrganized.getChildren().add(stdout);
         
         // Desininio pane objektu laikykle
         VBox rightOrganized = new VBox();
