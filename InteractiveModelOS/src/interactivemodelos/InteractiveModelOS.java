@@ -122,7 +122,8 @@ public class InteractiveModelOS extends Application {
                     while(vm.executeCommand(vcpu, stdinStatus, stdout)){
                         //
                     }
-                } catch (IOException ex) {
+                } catch (NumberFormatException | IOException ex) {
+                    System.out.println(ex);
                     //blogas formatavimas
                 }
             }
@@ -134,7 +135,8 @@ public class InteractiveModelOS extends Application {
             public void handle(ActionEvent event) {
                 try {
                     vm.executeCommand(vcpu, stdinStatus, stdout);
-                } catch (IOException ex) {
+                } catch (NumberFormatException | IOException ex) {
+                    System.out.println(ex);
                     //blogas formatavimas
                 }
             }
@@ -145,6 +147,7 @@ public class InteractiveModelOS extends Application {
             @Override
             public void handle(ActionEvent event) {
                 vcpu.setPC(0);
+                vcpu.setSF(0);
                 stdout.setText("");
             }
         });
