@@ -1,27 +1,17 @@
 package interactivemodelos;
 
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.geometry.HPos;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
@@ -47,7 +37,7 @@ public class InteractiveModelOS extends Application {
         // Virtuali masina
         VirtualMachine vm = new VirtualMachine();
         // Realus procesorius
-        RealCPU rcpu = new RealCPU();
+        RealCPU rcpu = new RealCPU(rm.getSharedMemoryTracker());
         // Virtualus procesorius
         VirtualCPU vcpu = new VirtualCPU();
         
@@ -120,7 +110,7 @@ public class InteractiveModelOS extends Application {
             @Override
             public void handle(ActionEvent event) {
                 try {
-                    while(vm.executeCommand(vcpu, stdinStatus, stdout)){
+                    while(vm.executeCommand(vcpu, rcpu, stdinStatus, stdout)){
                         //
                     }
                 } catch (NumberFormatException | IOException ex) {
@@ -135,7 +125,7 @@ public class InteractiveModelOS extends Application {
             @Override
             public void handle(ActionEvent event) {
                 try {
-                    vm.executeCommand(vcpu, stdinStatus, stdout);
+                    vm.executeCommand(vcpu, rcpu, stdinStatus, stdout);
                 } catch (NumberFormatException | IOException ex) {
                     System.out.println(ex);
                     //blogas formatavimas
@@ -168,59 +158,160 @@ public class InteractiveModelOS extends Application {
         });
         
         // Realaus procesoriaus pane
-        HBox rcpuData = new HBox();
+        VBox rcpuData = new VBox();
         rcpuData.setStyle("-fx-border-style: solid inside;");
         rcpuData.setSpacing(10);
         rcpuData.setAlignment(Pos.CENTER);
+        
+        HBox container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label ptr = new Label();    
         ptr.textProperty().bind(rcpu.ptrProperty());
-        rcpuData.getChildren().add(new Label("PTR "));
-        rcpuData.getChildren().add(ptr);
+        container.getChildren().add(new Label("PTR"));
+        container.getChildren().add(ptr);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label pc = new Label("PC");    
         pc.textProperty().bind(rcpu.pcProperty());
-        rcpuData.getChildren().add(new Label("| PC "));
-        rcpuData.getChildren().add(pc);
+        container.getChildren().add(new Label("PC"));
+        container.getChildren().add(pc);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label md = new Label("MD");    
         md.textProperty().bind(rcpu.mdProperty());
-        rcpuData.getChildren().add(new Label("| MD "));
-        rcpuData.getChildren().add(md);
+        container.getChildren().add(new Label("MD"));
+        container.getChildren().add(md);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label tmr = new Label("TMR");    
         tmr.textProperty().bind(rcpu.tmrProperty());
-        rcpuData.getChildren().add(new Label("| TMR "));
-        rcpuData.getChildren().add(tmr);
+        container.getChildren().add(new Label("TMR"));
+        container.getChildren().add(tmr);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label sf = new Label("SF");    
         sf.textProperty().bind(rcpu.sfProperty());
-        rcpuData.getChildren().add(new Label("| SF "));
-        rcpuData.getChildren().add(sf);
+        container.getChildren().add(new Label("SF"));
+        container.getChildren().add(sf);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label smr = new Label("SMR");    
         smr.textProperty().bind(rcpu.smrProperty());
-        rcpuData.getChildren().add(new Label("| SMR "));
-        rcpuData.getChildren().add(smr);
-        Label ax = new Label("SMR");    
+        container.getChildren().add(new Label("SMR"));
+        container.getChildren().add(smr);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
+        Label ax = new Label("AX");    
         ax.textProperty().bind(rcpu.axProperty());
-        rcpuData.getChildren().add(new Label("| AX "));
-        rcpuData.getChildren().add(ax);
+        container.getChildren().add(new Label("AX"));
+        container.getChildren().add(ax);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
+        Label bx = new Label("BX");    
+        bx.textProperty().bind(rcpu.bxProperty());
+        container.getChildren().add(new Label("BX"));
+        container.getChildren().add(bx);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
+        Label pi = new Label("PI");    
+        pi.textProperty().bind(rcpu.bxProperty());
+        container.getChildren().add(new Label("PI"));
+        container.getChildren().add(pi);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
+        Label si = new Label("SI");    
+        si.textProperty().bind(rcpu.bxProperty());
+        container.getChildren().add(new Label("SI"));
+        container.getChildren().add(si);
+        rcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
+        Label ch = new Label("CH");    
+        ch.textProperty().bind(rcpu.bxProperty());
+        container.getChildren().add(new Label("CH"));
+        container.getChildren().add(ch);
+        rcpuData.getChildren().add(container);
+        
+        HBox shmem = new HBox();
+        shmem.setStyle("-fx-border-style: solid inside;");
+        shmem.setSpacing(10);
+        shmem.setAlignment(Pos.CENTER);
+        Label shm = new Label();    
+        shm.textProperty().bind(rcpu.shmProperty());
+        shmem.getChildren().add(new Label("SHM "));
+        shmem.getChildren().add(shm);
+        
         
         // Virtualaus procesoriaus pane
-        HBox vcpuData = new HBox();
+        VBox vcpuData = new VBox();
         vcpuData.setStyle("-fx-border-style: solid inside;");  
         vcpuData.setSpacing(10);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label vpc = new Label();    
         vpc.textProperty().bind(vcpu.pcProperty());
-        vcpuData.getChildren().add(new Label("PC "));
-        vcpuData.getChildren().add(vpc);
+        container.getChildren().add(new Label("PC"));
+        container.getChildren().add(vpc);
+        vcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label vax = new Label();    
         vax.textProperty().bind(vcpu.axProperty());
-        vcpuData.getChildren().add(new Label("| AX "));
-        vcpuData.getChildren().add(vax);
+        container.getChildren().add(new Label("AX"));
+        container.getChildren().add(vax);
+        vcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label vbx = new Label();    
         vbx.textProperty().bind(vcpu.bxProperty());
-        vcpuData.getChildren().add(new Label("| BX "));
-        vcpuData.getChildren().add(vbx);
+        container.getChildren().add(new Label("BX"));
+        container.getChildren().add(vbx);
+        vcpuData.getChildren().add(container);
+        
+        container = new HBox();
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(10);
         Label vsf = new Label();    
         vsf.textProperty().bind(vcpu.sfProperty());
-        vcpuData.getChildren().add(new Label("| SF "));
-        vcpuData.getChildren().add(vsf);
+        container.getChildren().add(new Label("SF"));
+        container.getChildren().add(vsf);
+        vcpuData.getChildren().add(container);
         
         // Kairinio pane objektu laikykle
         VBox leftOrganized = new VBox();
@@ -276,10 +367,18 @@ public class InteractiveModelOS extends Application {
         rightOrganized.getChildren().add(step);
         rightOrganized.getChildren().add(loadProg);
         rightOrganized.getChildren().add(reset);
-        rightOrganized.getChildren().add(rcpuLabel);
-        rightOrganized.getChildren().add(rcpuData);
-        rightOrganized.getChildren().add(vcpuLabel);
-        rightOrganized.getChildren().add(vcpuData);
+        HBox processors = new HBox();
+        processors.setSpacing(10);
+        VBox real = new VBox();
+        real.getChildren().add(rcpuLabel);
+        real.getChildren().add(rcpuData);
+        real.getChildren().add(shmem);
+        processors.getChildren().add(real);
+        VBox virtual = new VBox();
+        virtual.getChildren().add(vcpuLabel);
+        virtual.getChildren().add(vcpuData);
+        processors.getChildren().add(virtual);
+        rightOrganized.getChildren().add(processors);
 
         root.setLeft(leftOrganized);
         root.setRight(rightOrganized);

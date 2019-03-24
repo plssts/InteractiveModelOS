@@ -22,7 +22,9 @@ public class RealCPU {
     private SimpleStringProperty CH;
     private SimpleStringProperty SHM;
     
-    public RealCPU(){
+    private SharedMemoryTracker smt;
+    
+    public RealCPU(SharedMemoryTracker smt){
         PTR = new SimpleStringProperty("0");
         PC = new SimpleStringProperty("0");
         TMR = new SimpleStringProperty("a");
@@ -35,6 +37,8 @@ public class RealCPU {
         CH = new SimpleStringProperty("000");
         PI = new SimpleStringProperty("0");
         SI = new SimpleStringProperty("0");
+        
+        this.smt = smt;
     }
     
     public void setPTR(int value){
@@ -77,5 +81,25 @@ public class RealCPU {
     
     public StringProperty bxProperty(){
         return BX;
+    }
+    
+    public StringProperty piProperty(){
+        return PI;
+    }
+    
+    public StringProperty siProperty(){
+        return SI;
+    }
+    
+    public StringProperty chProperty(){
+        return CH;
+    }
+    
+    public StringProperty shmProperty(){
+        return SHM;
+    }
+    
+    public SharedMemoryTracker smt(){
+        return smt;
     }
 }

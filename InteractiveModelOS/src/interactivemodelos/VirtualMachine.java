@@ -2,29 +2,17 @@
  */
 package interactivemodelos;
 
-import java.awt.event.InputMethodEvent;
-import java.awt.event.InputMethodListener;
-import java.awt.event.KeyEvent;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.animation.PauseTransition;
-import javafx.animation.Timeline;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.event.EventType;
-import javafx.scene.control.Button;
-import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.paint.Color;
-import javafx.stage.Modality;
 
 /**
  * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
@@ -77,7 +65,7 @@ public class VirtualMachine {
         }
     }
     
-    public boolean executeCommand(VirtualCPU vcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
+    public boolean executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
         int pc = Integer.parseInt(vcpu.pcProperty().getValue(), 16);
         int pcBlock = (pc / 16) + 2; // pradedama nuo 20 CODE segmento
         int pcWord = pc % 16;
@@ -160,10 +148,30 @@ public class VirtualMachine {
         }
         
         if (position.startsWith("SHL")){
-            
+            int id = Integer.parseInt(position.substring(3, 4), 16);
+            String current = rcpu.shmProperty().get();
+            if (current.charAt(id) == '1'){
+                // jau uzrakinta
+                return false;
+            } else {
+                char[] arr = current.toCharArray();
+                arr[id] = '1';
+                String result = String.valueOf(arr);
+                rcpu.shmProperty().setValue(result);
+            }
         }
         if (position.startsWith("SHU")){
-            
+            char id = position.charAt(3);
+            String current = rcpu.shmProperty().get();
+            if (current.charAt(id) == '0'){
+                // jau atrakinta
+                return false;
+            } else {
+                char[] arr = current.toCharArray();
+                arr[id] = '0';
+                String result = String.valueOf(arr);
+                rcpu.shmProperty().setValue(result);
+            }
         }
         
         switch(position){
@@ -673,16 +681,44 @@ public class VirtualMachine {
                 }
                 
             case "SHW ":
-                break;
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16) + 2;
+                pcWord = pc % 16;
+                registers = memory[pcBlock][pcWord].get();
+                int sharedWord = Integer.parseInt(registers.substring(1, 2), 16);
+                if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
+                    first = rcpu.smt().memoryProperty(sharedWord);
+                    second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
+                    first.setValue(second.get());
+                    return true;
+                } else {
+                    // dirbama su neuzrakinta atmintimi
+                    return false;
+                }
                 
             case "SHR ":
-                break;
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16) + 2;
+                pcWord = pc % 16;
+                registers = memory[pcBlock][pcWord].get();
+                sharedWord = Integer.parseInt(registers.substring(3, 4), 16);
+                if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
+                    second = rcpu.smt().memoryProperty(sharedWord);
+                    first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
+                    first.setValue(second.get());
+                    return true;
+                } else {
+                    // dirbama su neuzrakinta atmintimi
+                    return false;
+                }
                 
             case "HALT":
                 return false;
         }
         
-        vcpu.setPC(pc+1);
+        //vcpu.setPC(pc+1);
         return true;
     }
     

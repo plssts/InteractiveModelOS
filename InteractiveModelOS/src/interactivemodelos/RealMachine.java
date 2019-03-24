@@ -23,6 +23,14 @@ public class RealMachine {
         }
     }
     
+    public SharedMemoryTracker getSharedMemoryTracker(){
+        SimpleStringProperty[] shared = new SimpleStringProperty[16];
+        for (int i = 0; i < 16; ++i){
+            shared[i] = memory[64][i];
+        }
+        return new SharedMemoryTracker(shared);
+    }
+    
     public void loadVirtualMachine(RealCPU cpu, VirtualMachine vm){
         int pagingTableBlock = new Random().nextInt(63);    // Paskutinis 64 blokas yra bendra atmintis
         String ptrValue = Integer.toHexString(pagingTableBlock);
