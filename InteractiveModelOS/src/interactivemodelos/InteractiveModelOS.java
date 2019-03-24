@@ -14,6 +14,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.DialogPane;
@@ -170,6 +171,7 @@ public class InteractiveModelOS extends Application {
         HBox rcpuData = new HBox();
         rcpuData.setStyle("-fx-border-style: solid inside;");
         rcpuData.setSpacing(10);
+        rcpuData.setAlignment(Pos.CENTER);
         Label ptr = new Label();    
         ptr.textProperty().bind(rcpu.ptrProperty());
         rcpuData.getChildren().add(new Label("PTR "));
@@ -178,6 +180,26 @@ public class InteractiveModelOS extends Application {
         pc.textProperty().bind(rcpu.pcProperty());
         rcpuData.getChildren().add(new Label("| PC "));
         rcpuData.getChildren().add(pc);
+        Label md = new Label("MD");    
+        md.textProperty().bind(rcpu.mdProperty());
+        rcpuData.getChildren().add(new Label("| MD "));
+        rcpuData.getChildren().add(md);
+        Label tmr = new Label("TMR");    
+        tmr.textProperty().bind(rcpu.tmrProperty());
+        rcpuData.getChildren().add(new Label("| TMR "));
+        rcpuData.getChildren().add(tmr);
+        Label sf = new Label("SF");    
+        sf.textProperty().bind(rcpu.sfProperty());
+        rcpuData.getChildren().add(new Label("| SF "));
+        rcpuData.getChildren().add(sf);
+        Label smr = new Label("SMR");    
+        smr.textProperty().bind(rcpu.smrProperty());
+        rcpuData.getChildren().add(new Label("| SMR "));
+        rcpuData.getChildren().add(smr);
+        Label ax = new Label("SMR");    
+        ax.textProperty().bind(rcpu.axProperty());
+        rcpuData.getChildren().add(new Label("| AX "));
+        rcpuData.getChildren().add(ax);
         
         // Virtualaus procesoriaus pane
         HBox vcpuData = new HBox();
