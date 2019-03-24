@@ -517,16 +517,160 @@ public class VirtualMachine {
                 }
                 
             case "JAEQ":
-                break;
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16) + 2;
+                pcWord = pc % 16;
+                registers = memory[pcBlock][pcWord].get();
+                switch (registers.substring(1, 2)){ // + arba -
+                    case "+":
+                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
+                            if ((pc + offset + 2) / 16 >= 16){
+                                // pc 'islekia' is atminties reziu
+                                return false;
+                            }
+                            vcpu.setPC(pc + offset + 1);
+                            return true;
+                        }
+                        else {
+                            return true;
+                        }
+                        
+                    case "-":
+                        offset = Integer.parseInt(registers.substring(2, 4), 16);
+                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
+                            if ((pc - offset + 2) / 16 <= 1){
+                                // pc atsiduria DATA segmente
+                                return false;
+                            }
+                            vcpu.setPC(pc - offset + 1);
+                            return true;
+                        }
+                        else {
+                            return true;
+                        }
+                    default:
+                        throw new IOException("Neteisingas poslinkio formatas");
+                }
                 
             case "JBEQ":
-                break;
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16) + 2;
+                pcWord = pc % 16;
+                registers = memory[pcBlock][pcWord].get();
+                switch (registers.substring(1, 2)){ // + arba -
+                    case "+":
+                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
+                            (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
+                            (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
+                            if ((pc + offset + 2) / 16 >= 16){
+                                // pc 'islekia' is atminties reziu
+                                return false;
+                            }
+                            vcpu.setPC(pc + offset + 1);
+                            return true;
+                        }
+                        else {
+                            return true;
+                        }
+                        
+                    case "-":
+                        offset = Integer.parseInt(registers.substring(2, 4), 16);
+                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
+                            (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
+                            (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
+                            if ((pc - offset + 2) / 16 <= 1){
+                                // pc atsiduria DATA segmente
+                                return false;
+                            }
+                            vcpu.setPC(pc - offset + 1);
+                            return true;
+                        }
+                        else {
+                            return true;
+                        }
+                    default:
+                        throw new IOException("Neteisingas poslinkio formatas");
+                }
                 
             case "JABV":
-                break;
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16) + 2;
+                pcWord = pc % 16;
+                registers = memory[pcBlock][pcWord].get();
+                switch (registers.substring(1, 2)){ // + arba -
+                    case "+":
+                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
+                            if ((pc + offset + 2) / 16 >= 16){
+                                // pc 'islekia' is atminties reziu
+                                return false;
+                            }
+                            vcpu.setPC(pc + offset + 1);
+                            return true;
+                        }
+                        else {
+                            return true;
+                        }
+                        
+                    case "-":
+                        offset = Integer.parseInt(registers.substring(2, 4), 16);
+                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
+                            if ((pc - offset + 2) / 16 <= 1){
+                                // pc atsiduria DATA segmente
+                                return false;
+                            }
+                            vcpu.setPC(pc - offset + 1);
+                            return true;
+                        }
+                        else {
+                            return true;
+                        }
+                    default:
+                        throw new IOException("Neteisingas poslinkio formatas");
+                }
                 
             case "JBLW":
-                break;
+                ++pc;
+                vcpu.setPC(pc);
+                pcBlock = (pc / 16) + 2;
+                pcWord = pc % 16;
+                registers = memory[pcBlock][pcWord].get();
+                switch (registers.substring(1, 2)){ // + arba -
+                    case "+":
+                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
+                            if ((pc + offset + 2) / 16 >= 16){
+                                // pc 'islekia' is atminties reziu
+                                return false;
+                            }
+                            vcpu.setPC(pc + offset + 1);
+                            return true;
+                        }
+                        else {
+                            return true;
+                        }
+                        
+                    case "-":
+                        offset = Integer.parseInt(registers.substring(2, 4), 16);
+                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
+                            if ((pc - offset + 2) / 16 <= 1){
+                                // pc atsiduria DATA segmente
+                                return false;
+                            }
+                            vcpu.setPC(pc - offset + 1);
+                            return true;
+                        }
+                        else {
+                            return true;
+                        }
+                    default:
+                        throw new IOException("Neteisingas poslinkio formatas");
+                }
                 
             case "SHW ":
                 break;
