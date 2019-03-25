@@ -469,6 +469,7 @@ public class VirtualMachine {
                         second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
                 }
                 first.setValue(second.get());
+                vcpu.setPC(pc+1);
                 return true;
                 
             case "MOVC":
@@ -484,6 +485,7 @@ public class VirtualMachine {
                 String sword = memory[pcBlock][pcWord].get();
                 String constant = fword + sword;
                 vcpu.axProperty().setValue(Integer.toHexString(Integer.parseInt(constant, 16)));
+                vcpu.setPC(pc+1);
                 return true;
                 
             case "JEQL":
@@ -504,6 +506,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                         
@@ -518,6 +521,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                     default:
@@ -542,6 +546,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                         
@@ -556,6 +561,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                     default:
@@ -582,6 +588,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                         
@@ -598,6 +605,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                     default:
@@ -622,6 +630,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                         
@@ -636,6 +645,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                     default:
@@ -660,6 +670,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                         
@@ -674,6 +685,7 @@ public class VirtualMachine {
                             return true;
                         }
                         else {
+                            vcpu.setPC(pc+1);
                             return true;
                         }
                     default:
@@ -691,6 +703,7 @@ public class VirtualMachine {
                     first = rcpu.smt().memoryProperty(sharedWord);
                     second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
                     first.setValue(second.get());
+                    vcpu.setPC(pc+1);
                     return true;
                 } else {
                     // dirbama su neuzrakinta atmintimi
@@ -708,6 +721,7 @@ public class VirtualMachine {
                     second = rcpu.smt().memoryProperty(sharedWord);
                     first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
                     first.setValue(second.get());
+                    vcpu.setPC(pc+1);
                     return true;
                 } else {
                     // dirbama su neuzrakinta atmintimi
@@ -715,6 +729,7 @@ public class VirtualMachine {
                 }
                 
             case "HALT":
+                System.out.println("\u001B[31mPasiekta programos pabaiga.\u001B[0m");
                 return false;
         }
         

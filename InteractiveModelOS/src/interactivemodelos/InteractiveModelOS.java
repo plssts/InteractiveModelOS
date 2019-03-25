@@ -37,7 +37,9 @@ public class InteractiveModelOS extends Application {
         // Virtuali masina
         VirtualMachine vm = new VirtualMachine();
         // Realus procesorius
+        System.out.println("Kuriama");
         RealCPU rcpu = new RealCPU(rm.getSharedMemoryTracker());
+        System.out.println("Sukurta");
         // Virtualus procesorius
         VirtualCPU vcpu = new VirtualCPU();
         
