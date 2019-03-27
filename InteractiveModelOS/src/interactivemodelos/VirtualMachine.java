@@ -5,8 +5,6 @@ package interactivemodelos;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.Label;
@@ -18,7 +16,6 @@ import javafx.scene.paint.Color;
  * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
  */
 public class VirtualMachine {
-    private int ptr = 0;
     private Assembly ass;
     private final SimpleStringProperty[][] memory = new SimpleStringProperty[16][16];
     
@@ -42,12 +39,14 @@ public class VirtualMachine {
                 throw new IOException("Tuscia programa");
             }
         } catch (StringIndexOutOfBoundsException | IOException ex) {
-            Logger.getLogger(VirtualMachine.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println(ex);
+            return;
         }
         
         // Uzpildoma atmintis instrukcijomis
         int block = 0, wrd = 0;
         for (String word : commands){
+            System.out.println(word);
             if (word.equals("[STC]")){
                 block = 2; // pereinama i code blokus lastelese nuo 20...
                 wrd = 0;
@@ -60,8 +59,6 @@ public class VirtualMachine {
                 wrd = 0;
                 ++block;
             }
-            
-            // padaryti exception, kai block >15 pasidaro (netelpa programa)
         }
     }
     
@@ -74,20 +71,20 @@ public class VirtualMachine {
         
         if (position.startsWith("J+")){
             int offset = Integer.parseInt(position.substring(2, 4), 16);
-            if ((pc + offset + 2) / 16 >= 16){
+            if ((pc + offset + 1) > 224){
                 // pc 'islekia' is virtualios atminties reziu
                 return false;
             }
-            vcpu.setPC(pc + offset + 2);
+            vcpu.setPC(pc + offset + 1);
             return true;
         }
         if (position.startsWith("J-")){
             int offset = Integer.parseInt(position.substring(2, 4), 16);
-            if ((pc - offset + 2) / 16 <= 1){
+            if ((pc - offset + 1) < 0){
                 // pc atsiduria DATA segmente
                 return false;
             }
-            vcpu.setPC(pc - offset + 2);
+            vcpu.setPC(pc - offset + 1);
             return true;
         }
         
@@ -135,7 +132,7 @@ public class VirtualMachine {
             }
             else if (input.length() < 9){ // Ivestas skaicius (16-aineje sistemoje)
                 //try {
-                    memory[destBlock][destWord].setValue(Integer.toHexString(Integer.parseInt(input, 16)));
+                    memory[destBlock][destWord].setValue(Integer.toHexString((int)Long.parseLong(input, 16)));
                 //} catch (NumberFormatException ex){
                     // neteisingas skaicius inpute
                 //}
@@ -158,10 +155,12 @@ public class VirtualMachine {
                 arr[id] = '1';
                 String result = String.valueOf(arr);
                 rcpu.shmProperty().setValue(result);
+                vcpu.setPC(pc+1);
+                return true;
             }
         }
         if (position.startsWith("SHU")){
-            char id = position.charAt(3);
+            int id = Integer.parseInt(position.substring(3, 4), 16);
             String current = rcpu.shmProperty().get();
             if (current.charAt(id) == '0'){
                 // jau atrakinta
@@ -171,6 +170,8 @@ public class VirtualMachine {
                 arr[id] = '0';
                 String result = String.valueOf(arr);
                 rcpu.shmProperty().setValue(result);
+                vcpu.setPC(pc+1);
+                return true;
             }
         }
         
@@ -202,9 +203,9 @@ public class VirtualMachine {
                     default:
                         throw new IOException("Neegzistuojantys ADD registrai");
                 }
-                int result = Integer.parseInt(first.get(), 16) + Integer.parseInt(second.get(), 16);
+                int result = (int)Long.parseLong(first.get(), 16) + (int)Long.parseLong(second.get(), 16);
                 boolean sign = false, zero = false, carry = false;
-                if (result < Integer.parseInt(first.get(), 16) || result < Integer.parseInt(second.get(), 16)){
+                if (result < (int)Long.parseLong(first.get(), 16) || result < (int)Long.parseLong(second.get(), 16)){
                     carry = true;
                 }
                 if (result == 0){
@@ -245,9 +246,9 @@ public class VirtualMachine {
                     default:
                         throw new IOException("Neegzistuojantys SUB registrai");
                 }
-                result = Integer.parseInt(first.get(), 16) - Integer.parseInt(second.get(), 16);
+                result = (int)Long.parseLong(first.get(), 16) - (int)Long.parseLong(second.get(), 16);
                 sign = false; zero = false; carry = false;
-                if (Integer.parseInt(first.get(), 16) < Integer.parseInt(second.get(), 16)){
+                if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
                     carry = true;
                 }
                 if (result == 0){
@@ -289,15 +290,15 @@ public class VirtualMachine {
                         throw new IOException("Neegzistuojantys CMP registrai");
                 }
                 sign = false; zero = false; carry = false;
-                if (Integer.parseInt(first.get(), 16) == Integer.parseInt(second.get(), 16)){
+                if ((int)Long.parseLong(first.get(), 16) == (int)Long.parseLong(second.get(), 16)){
                     zero = true;
-                } else if (Integer.parseInt(first.get(), 16) < Integer.parseInt(second.get(), 16)){
+                } else if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
                     zero = false; carry = true;
-                } else if (Integer.parseInt(first.get(), 16) > Integer.parseInt(second.get(), 16)){
+                } else if ((int)Long.parseLong(first.get(), 16) > (int)Long.parseLong(second.get(), 16)){
                     zero = false; carry = false;
-                } else if (Integer.parseInt(first.get(), 16) <= Integer.parseInt(second.get(), 16)){
+                } else if ((int)Long.parseLong(first.get(), 16) <= (int)Long.parseLong(second.get(), 16)){
                     zero = true; carry = true;
-                } else if (Integer.parseInt(first.get(), 16) >= Integer.parseInt(second.get(), 16)){
+                } else if ((int)Long.parseLong(first.get(), 16) >= (int)Long.parseLong(second.get(), 16)){
                     carry = false;
                 }
                 vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
@@ -331,9 +332,9 @@ public class VirtualMachine {
                     default:
                         throw new IOException("Neegzistuojantys MUL registrai");
                 }
-                result = Integer.parseInt(first.get(), 16) * Integer.parseInt(second.get(), 16);
+                result = (int)Long.parseLong(first.get(), 16) * (int)Long.parseLong(second.get(), 16);
                 sign = false; zero = false; carry = false;
-                if (result < Integer.parseInt(first.get(), 16) || result < Integer.parseInt(second.get(), 16)){
+                if (result < (int)Long.parseLong(first.get(), 16) || result < (int)Long.parseLong(second.get(), 16)){
                     carry = true;
                 }
                 if (result == 0){
@@ -374,13 +375,13 @@ public class VirtualMachine {
                     default:
                         throw new IOException("Neegzistuojantys DIV registrai");
                 }
-                if (Integer.parseInt(second.get(), 16) == 0){
+                if ((int)Long.parseLong(second.get(), 16) == 0){
                     throw new IOException("Daliklis yra 0");
                 }
                 
-                result = Integer.parseInt(first.get(), 16) / Integer.parseInt(second.get(), 16);
+                result = (int)Long.parseLong(first.get(), 16) / (int)Long.parseLong(second.get(), 16);
                 sign = false; zero = false; carry = false;
-                if (Integer.parseInt(first.get(), 16) < Integer.parseInt(second.get(), 16)){
+                if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
                     carry = true;
                 }
                 if (result == 0){
@@ -421,13 +422,13 @@ public class VirtualMachine {
                     default:
                         throw new IOException("Neegzistuojantys MOD registrai");
                 }
-                if (Integer.parseInt(second.get(), 16) == 0){
+                if ((int)Long.parseLong(second.get(), 16) == 0){
                     throw new IOException("Daliklis yra 0");
                 }
                 
-                result = Integer.parseInt(first.get(), 16) % Integer.parseInt(second.get(), 16);
+                result = (int)Long.parseLong(first.get(), 16) % (int)Long.parseLong(second.get(), 16);
                 sign = false; zero = false; carry = false;
-                if (Integer.parseInt(first.get(), 16) < Integer.parseInt(second.get(), 16)){
+                if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
                     carry = true;
                 }
                 if (result == 0){
@@ -484,7 +485,7 @@ public class VirtualMachine {
                 pcWord = pc % 16;
                 String sword = memory[pcBlock][pcWord].get();
                 String constant = fword + sword;
-                vcpu.axProperty().setValue(Integer.toHexString(Integer.parseInt(constant, 16)));
+                vcpu.axProperty().setValue(Integer.toHexString((int)Long.parseLong(constant, 16)));
                 vcpu.setPC(pc+1);
                 return true;
                 
@@ -498,7 +499,7 @@ public class VirtualMachine {
                     case "+":
                         int offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc + offset + 2) / 16 >= 16){
+                            if ((pc + offset + 1) > 224){
                                 // pc 'islekia' is atminties reziu
                                 return false;
                             }
@@ -513,7 +514,7 @@ public class VirtualMachine {
                     case "-":
                         offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc - offset + 2) / 16 <= 1){
+                            if ((pc - offset + 1) < 0){
                                 // pc atsiduria DATA segmente
                                 return false;
                             }
@@ -538,7 +539,7 @@ public class VirtualMachine {
                     case "+":
                         int offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
-                            if ((pc + offset + 2) / 16 >= 16){
+                            if ((pc + offset + 1) > 224){
                                 // pc 'islekia' is atminties reziu
                                 return false;
                             }
@@ -553,7 +554,7 @@ public class VirtualMachine {
                     case "-":
                         offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
-                            if ((pc - offset + 2) / 16 <= 1){
+                            if ((pc - offset + 1) <= 0){
                                 // pc atsiduria DATA segmente
                                 return false;
                             }
@@ -580,7 +581,7 @@ public class VirtualMachine {
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
                             (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
                             (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc + offset + 2) / 16 >= 16){
+                            if ((pc + offset + 1) > 224){
                                 // pc 'islekia' is atminties reziu
                                 return false;
                             }
@@ -597,7 +598,7 @@ public class VirtualMachine {
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
                             (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
                             (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc - offset + 2) / 16 <= 1){
+                            if ((pc - offset + 1) < 0){
                                 // pc atsiduria DATA segmente
                                 return false;
                             }
@@ -622,7 +623,7 @@ public class VirtualMachine {
                     case "+":
                         int offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
-                            if ((pc + offset + 2) / 16 >= 16){
+                            if ((pc + offset + 1) > 224){
                                 // pc 'islekia' is atminties reziu
                                 return false;
                             }
@@ -637,7 +638,7 @@ public class VirtualMachine {
                     case "-":
                         offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
-                            if ((pc - offset + 2) / 16 <= 1){
+                            if ((pc - offset + 1) < 0){
                                 // pc atsiduria DATA segmente
                                 return false;
                             }
@@ -662,7 +663,7 @@ public class VirtualMachine {
                     case "+":
                         int offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
-                            if ((pc + offset + 2) / 16 >= 16){
+                            if ((pc + offset + 1) > 224){
                                 // pc 'islekia' is atminties reziu
                                 return false;
                             }
@@ -677,7 +678,7 @@ public class VirtualMachine {
                     case "-":
                         offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
-                            if ((pc - offset + 2) / 16 <= 1){
+                            if ((pc - offset + 1) < 0){
                                 // pc atsiduria DATA segmente
                                 return false;
                             }
@@ -733,8 +734,8 @@ public class VirtualMachine {
                 return false;
         }
         
-        //vcpu.setPC(pc+1);
-        return true;
+        // neegzistuojanti komanda
+        return false;
     }
     
     private String arrangeFlags(boolean sign, boolean zero, boolean carry){

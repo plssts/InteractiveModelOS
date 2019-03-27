@@ -41,6 +41,7 @@ public class Assembly {
     
     private void parseData(BufferedReader br, ArrayList commands) throws IOException{
         String line;
+        int dataWords = 0;
         
         while ((line = br.readLine()) != null){
             if (line.equals("CODE")){
@@ -51,6 +52,10 @@ public class Assembly {
             
             String[] all = line.split(", 0");
             int wordCount = Integer.parseInt(line.split("w")[0].trim());
+            dataWords += wordCount;
+            if (dataWords > 32){
+                throw new IOException("DATA atminties dydis virsija 2 blokus");
+            }
             
             // Jeigu cia yra argumentas-stringas
             if (all[0].contains("\"")){
@@ -58,9 +63,18 @@ public class Assembly {
                 for (int i = 0; i < wordCount; ++i){
                     if (i == wordCount - 1){
                         commands.add(word.substring(0, word.length()));
+                        if (word.substring(0, word.length()).length() > 4){
+                            // Zodziu prasyta maziau, negu uzima argumentas-stringas
+                            throw new IOException("Neteisingas zodziu kiekis " + wordCount + " duomenu eilutei " + word);
+                        }
                         break;
                     }
-                    commands.add(word.substring(0, 4));
+                    try {
+                        commands.add(word.substring(0, 4));
+                    } catch(StringIndexOutOfBoundsException ex){
+                        // Zodziu prasyta daugiau, negu uzima argumentas-stringas
+                        throw new IOException("Neteisingas zodziu kiekis " + wordCount + " duomenu eilutei " + word);
+                    }
                     word = word.substring(4);
                 }
             }
@@ -76,6 +90,7 @@ public class Assembly {
     }
     
     private void parseCode(BufferedReader br, ArrayList commands) throws IOException{
+        int codeWords = 0;
         if (!parseCodeGracefully){
             throw new IOException("Neteisingas programos formatavimas");
         }
@@ -84,6 +99,10 @@ public class Assembly {
         
         while ((line = br.readLine()) != null){
             for (int i = 0; i < line.length(); i += 4){
+                ++codeWords;
+                if (codeWords > 224){
+                    throw new IOException("Programoje per daug instrukciju");
+                }
                 String word = line.substring(i, i+4);
                 commands.add(word);
             }

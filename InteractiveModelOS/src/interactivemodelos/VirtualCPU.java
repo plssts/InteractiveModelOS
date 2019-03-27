@@ -21,7 +21,7 @@ public class VirtualCPU {
         BX = new SimpleStringProperty("0");
     }
     
-    public void setPC(int value){
+    public void setPC(int value){ // galbut nereikalingas metodas
         String sigByte = value < 16 ? "0" : ""; // Jeigu PC yra 0-F
         PC.setValue(sigByte + Integer.toHexString(value));
     }

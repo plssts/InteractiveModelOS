@@ -141,6 +141,8 @@ public class InteractiveModelOS extends Application {
             public void handle(ActionEvent event) {
                 vcpu.setPC(0);
                 vcpu.setSF(0);
+                vcpu.axProperty().setValue("0");
+                vcpu.bxProperty().setValue("0");
                 stdout.setText("");
             }
         });
@@ -149,6 +151,11 @@ public class InteractiveModelOS extends Application {
         loadProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
+                for (int i = 0; i < 16; ++i){
+                    for (int j = 0; j < 16 ; ++j){
+                        vm.setWord(i, j, "0");
+                    }
+                }
                 FileChooser browser = new FileChooser();
                 browser.getExtensionFilters().add(new ExtensionFilter("Tekstiniai programos failai", "*.txt"));
                 File sourceCode = browser.showOpenDialog(primaryStage);
@@ -156,6 +163,10 @@ public class InteractiveModelOS extends Application {
                     return;
                 }
                 vm.loadProgram(sourceCode);
+                vcpu.setPC(0);
+                vcpu.setSF(0);
+                vcpu.axProperty().setValue("0");
+                vcpu.bxProperty().setValue("0");
             }
         });
         
