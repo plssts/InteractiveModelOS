@@ -93,6 +93,9 @@ public class VirtualMachine {
         }
         
         if (position.startsWith("WW")){
+            char[] temp = rcpu.chProperty().get().toCharArray();
+            temp[1] = '1';
+            rcpu.chProperty().setValue(String.valueOf(temp));
             int srcBlock = -1, srcWord = -1;
             //try {
                 srcBlock = Integer.parseInt(position.substring(2, 3), 16);
@@ -103,10 +106,16 @@ public class VirtualMachine {
             
             stdout.appendText(memory[srcBlock][srcWord].get());
             vcpu.setPC(pc+1);
+            temp = rcpu.chProperty().get().toCharArray();
+            temp[1] = '0';
+            rcpu.chProperty().setValue(String.valueOf(temp));
             rcpu.decrTMRandCheck();
             return true;
         }
         if (position.startsWith("RW")){
+            char[] temp = rcpu.chProperty().get().toCharArray();
+            temp[0] = '1';
+            rcpu.chProperty().setValue(String.valueOf(temp));
             int destBlock = -1, destWord = -1;
             //try {
                 destBlock = Integer.parseInt(position.substring(2, 3), 16);
@@ -127,6 +136,9 @@ public class VirtualMachine {
             stdinStatus.setTextFill(Color.DARKRED);
             String input = dialog.getEditor().getText();
             System.out.println(input);
+            temp = rcpu.chProperty().get().toCharArray();
+            temp[0] = '0';
+            rcpu.chProperty().setValue(String.valueOf(temp));
             if (input.startsWith("\"")){ // Ivestas string, ne skaicius
                 if (input.endsWith("\"") && input.length() < 7){
                     memory[destBlock][destWord].setValue(input.substring(1, input.length() - 1));

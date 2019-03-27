@@ -157,9 +157,19 @@ public class InteractiveModelOS extends Application {
                         vm.setWord(i, j, "0");
                     }
                 }
+                
+                char[] temp = rcpu.chProperty().get().toCharArray();
+                temp[2] = '1';
+                rcpu.chProperty().setValue(String.valueOf(temp));
+                
                 FileChooser browser = new FileChooser();
                 browser.getExtensionFilters().add(new ExtensionFilter("Tekstiniai programos failai", "*.txt"));
                 File sourceCode = browser.showOpenDialog(primaryStage);
+                
+                temp = rcpu.chProperty().get().toCharArray();
+                temp[2] = '0';
+                rcpu.chProperty().setValue(String.valueOf(temp));
+                
                 if (sourceCode == null){
                     return;
                 }
@@ -253,7 +263,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label pi = new Label("PI");    
-        pi.textProperty().bind(rcpu.bxProperty());
+        pi.textProperty().bind(rcpu.piProperty());
         container.getChildren().add(new Label("PI"));
         container.getChildren().add(pi);
         rcpuData.getChildren().add(container);
@@ -262,7 +272,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label si = new Label("SI");    
-        si.textProperty().bind(rcpu.bxProperty());
+        si.textProperty().bind(rcpu.siProperty());
         container.getChildren().add(new Label("SI"));
         container.getChildren().add(si);
         rcpuData.getChildren().add(container);
@@ -271,7 +281,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label ch = new Label("CH");    
-        ch.textProperty().bind(rcpu.bxProperty());
+        ch.textProperty().bind(rcpu.chProperty());
         container.getChildren().add(new Label("CH"));
         container.getChildren().add(ch);
         rcpuData.getChildren().add(container);
