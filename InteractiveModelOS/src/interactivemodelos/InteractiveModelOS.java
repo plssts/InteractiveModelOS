@@ -143,6 +143,7 @@ public class InteractiveModelOS extends Application {
                 vcpu.setSF(0);
                 vcpu.axProperty().setValue("0");
                 vcpu.bxProperty().setValue("0");
+                rcpu.tmrProperty().setValue("a");
                 stdout.setText("");
             }
         });

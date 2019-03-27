@@ -51,6 +51,15 @@ public class RealCPU {
         PC.setValue(sigByte + Integer.toHexString(value));
     }
     
+    public void decrTMRandCheck(){
+        if (Integer.parseInt(TMR.get(), 16) > 0){
+            TMR.setValue(Integer.toHexString(Integer.parseInt(TMR.getValue(), 16) - 1));
+        } else {
+            // perduodamas valdymas kitai VM; siame projekte nerealizuojama.
+            TMR.setValue("a");
+        }
+    }
+    
     public StringProperty ptrProperty(){
         return PTR;
     }
