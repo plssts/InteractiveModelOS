@@ -22,6 +22,9 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
+/**
+ * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
+ */
 public class InteractiveModelOS extends Application {
     Button button2 = new Button();
 
