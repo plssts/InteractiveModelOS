@@ -218,7 +218,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label pc = new Label("PC");    
-        pc.textProperty().bind(rcpu.pcProperty());
+        pc.textProperty().bind(vcpu.pcProperty());
         container.getChildren().add(new Label("PC"));
         container.getChildren().add(pc);
         rcpuData.getChildren().add(container);
@@ -245,7 +245,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label sf = new Label("SF");    
-        sf.textProperty().bind(rcpu.sfProperty());
+        sf.textProperty().bind(vcpu.sfProperty());
         container.getChildren().add(new Label("SF"));
         container.getChildren().add(sf);
         rcpuData.getChildren().add(container);
@@ -263,7 +263,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label ax = new Label("AX");    
-        ax.textProperty().bind(rcpu.axProperty());
+        ax.textProperty().bind(vcpu.axProperty());
         container.getChildren().add(new Label("AX"));
         container.getChildren().add(ax);
         rcpuData.getChildren().add(container);
@@ -272,7 +272,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label bx = new Label("BX");    
-        bx.textProperty().bind(rcpu.bxProperty());
+        bx.textProperty().bind(vcpu.bxProperty());
         container.getChildren().add(new Label("BX"));
         container.getChildren().add(bx);
         rcpuData.getChildren().add(container);

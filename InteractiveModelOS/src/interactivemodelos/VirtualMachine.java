@@ -18,6 +18,12 @@ import javafx.scene.paint.Color;
 public class VirtualMachine {
     private Assembly ass;
     private final SimpleStringProperty[][] memory = new SimpleStringProperty[16][16];
+    private boolean nonCommandStep = false;
+    private boolean setModeTo0 = false;
+    private boolean setModeTo1 = false;
+    private boolean throwableInt = false;
+    private String nextPIval = "0";
+    private String nextSIval = "0";
     
     public VirtualMachine(){ 
         // Pirminis atminties uzkrovimas po 4 baitus
@@ -62,23 +68,88 @@ public class VirtualMachine {
         }
     }
     
+    public void clearBooleans(){
+        nonCommandStep = false;
+        setModeTo0 = false;
+        setModeTo1 = false;
+        throwableInt = false;
+        nextPIval = "0";
+        nextSIval = "0";
+    }
+    
     public boolean executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
+        if (nonCommandStep){
+            if (setModeTo0){
+                rcpu.mdProperty().setValue("0");
+                //setModeTo0 = false;
+                //nonCommandStep = false;
+                clearBooleans();
+                if (throwableInt){
+                    String message = "";
+                    switch(nextPIval){
+                        case "1":
+                            message = "Neteisingas adresas";
+                            break;
+                        case "2":
+                            message = "Neteisingas operacijos kodas";
+                            break;
+                        case "3":
+                            message = "Neteisingas priskyrimas";
+                            break;
+                        case "5":
+                            message = "Bandymas naudotis bendraja atmintimi jos neuzrakinus";
+                            break;
+                    }
+                    throw new IOException("[INT] " + message + " [INT]");
+                }
+                return true;
+                
+            } else if (setModeTo1){
+                rcpu.mdProperty().setValue("1");
+                setModeTo1 = false;
+                return true;
+                
+            } else if (!nextPIval.isEmpty()){
+                rcpu.piProperty().setValue(nextPIval);
+                setModeTo0 = true;
+                if (!nextPIval.equals("4")){
+                    throwableInt = true;
+                }
+                else {
+                    stdout.setText("[INT] Perpildymas [INT]");
+                }
+                return true;
+                
+            } else if (!nextSIval.isEmpty()){
+                rcpu.siProperty().setValue(nextSIval);
+                setModeTo0 = true;
+                throwableInt = false;
+                return true;
+                
+            }
+            return true;
+        }
+        
         int pc = Integer.parseInt(vcpu.pcProperty().getValue(), 16);
         int pcBlock = (pc / 16) + 2; // pradedama nuo 20 CODE segmento
         int pcWord = pc % 16;
         String position = memory[pcBlock][pcWord].getValue();
-        System.out.println(position);
         
-        if (rcpu.siProperty().get().equals("7")){
+        if (rcpu.siProperty().get().equals("7")){ // HALT pasiektas
             return false;
         }
         
+        System.out.println(position);
+        
         if (position.startsWith("J+")){
             int offset = Integer.parseInt(position.substring(2, 4), 16);
-            if ((pc + offset + 1) > 224){
+            if ((pc + offset + 1) > 255){
                 // pc 'islekia' is virtualios atminties reziu
+                nextPIval = "1";
+                nonCommandStep = true;
+                setModeTo1 = true;
                 rcpu.decrTMRandCheck();
-                return false;
+                return true;
             }
             vcpu.setPC(pc + offset + 1);
             rcpu.decrTMRandCheck();
@@ -87,9 +158,12 @@ public class VirtualMachine {
         if (position.startsWith("J-")){
             int offset = Integer.parseInt(position.substring(2, 4), 16);
             if ((pc - offset + 1) < 0){
-                // pc atsiduria DATA segmente
+                // pc
+                nextPIval = "1";
+                nonCommandStep = true;
+                setModeTo1 = true;
                 rcpu.decrTMRandCheck();
-                return false;
+                return true;
             }
             vcpu.setPC(pc - offset + 1);
             rcpu.decrTMRandCheck();
@@ -240,9 +314,9 @@ public class VirtualMachine {
                 boolean sign = false, zero = false, carry = false;
                 if (result < (int)Long.parseLong(first.get(), 16) || result < (int)Long.parseLong(second.get(), 16)){
                     carry = true;
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.piProperty().setValue("4");
-                    rcpu.mdProperty().setValue("0");
+                    //rcpu.mdProperty().setValue("1");
+                    //rcpu.piProperty().setValue("4");
+                    //rcpu.mdProperty().setValue("0");
                 }
                 if (result == 0){
                     zero = true;
@@ -251,12 +325,19 @@ public class VirtualMachine {
                     sign = true;
                 }
                 vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                
+                if (carry){
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    nextPIval = "4";
+                }
+                
                 first.setValue(Integer.toHexString(result));
                 vcpu.setPC(pc+1);
                 rcpu.decrTMRandCheck();
-                rcpu.mdProperty().setValue("1");
-                rcpu.piProperty().setValue("0");
-                rcpu.mdProperty().setValue("0");
+                //rcpu.mdProperty().setValue("1");
+                //rcpu.piProperty().setValue("0");
+                //rcpu.mdProperty().setValue("0");
                 return true;
                 
             case "SUB ":
@@ -299,20 +380,23 @@ public class VirtualMachine {
                 }
                 // perpildymo pertraukimas
                 if (result > (int)Long.parseLong(first.get(), 16)){
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.piProperty().setValue("4");
-                    rcpu.mdProperty().setValue("0");
+                    //rcpu.mdProperty().setValue("1");
+                    //rcpu.piProperty().setValue("4");
+                    //rcpu.mdProperty().setValue("0");
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    nextPIval = "4";
                 }
                 vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                 first.setValue(Integer.toHexString(result));
                 vcpu.setPC(pc+1);
                 rcpu.decrTMRandCheck();
                 // perpildymo pertraukimo atstatymas
-                if (result > (int)Long.parseLong(first.get(), 16)){
+                /*if (result > (int)Long.parseLong(first.get(), 16)){
                     rcpu.mdProperty().setValue("1");
                     rcpu.piProperty().setValue("0");
                     rcpu.mdProperty().setValue("0");
-                }
+                }*/
                 return true;
                 
             case "CMP ":
@@ -390,9 +474,9 @@ public class VirtualMachine {
                 sign = false; zero = false; carry = false;
                 if (result < (int)Long.parseLong(first.get(), 16) || result < (int)Long.parseLong(second.get(), 16)){
                     carry = true;
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.piProperty().setValue("4");
-                    rcpu.mdProperty().setValue("0");
+                    //rcpu.mdProperty().setValue("1");
+                    //rcpu.piProperty().setValue("4");
+                    //rcpu.mdProperty().setValue("0");
                 }
                 if (result == 0){
                     zero = true;
@@ -401,12 +485,19 @@ public class VirtualMachine {
                     sign = true;
                 }
                 vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                
+                if (carry){
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    nextPIval = "4";
+                }
+                
                 first.setValue(Integer.toHexString(result));
                 vcpu.setPC(pc+1);
                 rcpu.decrTMRandCheck();
-                rcpu.mdProperty().setValue("1");
-                rcpu.piProperty().setValue("4");
-                rcpu.mdProperty().setValue("0");
+                //rcpu.mdProperty().setValue("1");
+                //rcpu.piProperty().setValue("4");
+                //rcpu.mdProperty().setValue("0");
                 return true;
                 
             case "DIV ":
@@ -437,7 +528,11 @@ public class VirtualMachine {
                         throw new IOException("Neegzistuojantys DIV registrai");
                 }
                 if ((int)Long.parseLong(second.get(), 16) == 0){
-                    throw new IOException("Daliklis yra 0");
+                    nextPIval = "3";
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    return true;
+                    //throw new IOException("Neteisingas priskyrimas");
                 }
                 
                 result = (int)Long.parseLong(first.get(), 16) / (int)Long.parseLong(second.get(), 16);
@@ -485,7 +580,11 @@ public class VirtualMachine {
                         throw new IOException("Neegzistuojantys MOD registrai");
                 }
                 if ((int)Long.parseLong(second.get(), 16) == 0){
-                    throw new IOException("Daliklis yra 0");
+                    nextPIval = "3";
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    return true;
+                    //throw new IOException("Daliklis yra 0");
                 }
                 
                 result = (int)Long.parseLong(first.get(), 16) % (int)Long.parseLong(second.get(), 16);
@@ -520,7 +619,14 @@ public class VirtualMachine {
                         first = vcpu.bxProperty();
                         break;
                     default:
-                        first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
+                        try {
+                            first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
+                        } catch(NumberFormatException ex){
+                            nextPIval = "1";
+                            nonCommandStep = true;
+                            setModeTo1 = true;
+                            return true;
+                        }
                 }
                 switch (registers.substring(2, 4)){ // antrasis operandas
                     case "AX":
@@ -530,7 +636,14 @@ public class VirtualMachine {
                         second = vcpu.bxProperty();
                         break;
                     default:
-                        second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
+                        try {
+                            second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
+                        } catch(NumberFormatException ex){
+                            nextPIval = "1";
+                            nonCommandStep = true;
+                            setModeTo1 = true;
+                            return true;
+                        }
                 }
                 first.setValue(second.get());
                 vcpu.setPC(pc+1);
@@ -549,7 +662,14 @@ public class VirtualMachine {
                 pcWord = pc % 16;
                 String sword = memory[pcBlock][pcWord].get();
                 String constant = fword + sword;
-                vcpu.axProperty().setValue(Integer.toHexString((int)Long.parseLong(constant, 16)));
+                try {
+                    vcpu.axProperty().setValue(Integer.toHexString((int)Long.parseLong(constant, 16)));
+                } catch(NumberFormatException ex){
+                    nextPIval = "3";
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    return true;
+                }
                 vcpu.setPC(pc+1);
                 rcpu.decrTMRandCheck();
                 return true;
@@ -564,10 +684,13 @@ public class VirtualMachine {
                     case "+":
                         int offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc + offset + 1) > 224){
+                            if ((pc + offset + 1) > 255){
                                 // pc 'islekia' is atminties reziu
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc + offset + 1);
                             rcpu.decrTMRandCheck();
@@ -583,9 +706,12 @@ public class VirtualMachine {
                         offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
                             if ((pc - offset + 1) < 0){
-                                // pc atsiduria DATA segmente
+                                // pc 
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc - offset + 1);
                             rcpu.decrTMRandCheck();
@@ -610,10 +736,13 @@ public class VirtualMachine {
                     case "+":
                         int offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
-                            if ((pc + offset + 1) > 224){
+                            if ((pc + offset + 1) > 255){
                                 // pc 'islekia' is atminties reziu
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc + offset + 1);
                             rcpu.decrTMRandCheck();
@@ -628,10 +757,13 @@ public class VirtualMachine {
                     case "-":
                         offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
-                            if ((pc - offset + 1) <= 0){
-                                // pc atsiduria DATA segmente
+                            if ((pc - offset + 1) < 0){
+                                // pc
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc - offset + 1);
                             rcpu.decrTMRandCheck();
@@ -658,10 +790,13 @@ public class VirtualMachine {
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
                             (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
                             (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc + offset + 1) > 224){
+                            if ((pc + offset + 1) > 255){
                                 // pc 'islekia' is atminties reziu
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc + offset + 1);
                             rcpu.decrTMRandCheck();
@@ -679,9 +814,12 @@ public class VirtualMachine {
                             (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
                             (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
                             if ((pc - offset + 1) < 0){
-                                // pc atsiduria DATA segmente
+                                // pc
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc - offset + 1);
                             rcpu.decrTMRandCheck();
@@ -706,10 +844,13 @@ public class VirtualMachine {
                     case "+":
                         int offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
-                            if ((pc + offset + 1) > 224){
+                            if ((pc + offset + 1) > 255){
                                 // pc 'islekia' is atminties reziu
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc + offset + 1);
                             rcpu.decrTMRandCheck();
@@ -725,9 +866,12 @@ public class VirtualMachine {
                         offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
                             if ((pc - offset + 1) < 0){
-                                // pc atsiduria DATA segmente
+                                // pc
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc - offset + 1);
                             rcpu.decrTMRandCheck();
@@ -752,10 +896,13 @@ public class VirtualMachine {
                     case "+":
                         int offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
-                            if ((pc + offset + 1) > 224){
+                            if ((pc + offset + 1) > 255){
                                 // pc 'islekia' is atminties reziu
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc + offset + 1);
                             rcpu.decrTMRandCheck();
@@ -771,9 +918,12 @@ public class VirtualMachine {
                         offset = Integer.parseInt(registers.substring(2, 4), 16);
                         if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
                             if ((pc - offset + 1) < 0){
-                                // pc atsiduria DATA segmente
+                                // pc
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
                                 rcpu.decrTMRandCheck();
-                                return false;
+                                return true;
                             }
                             vcpu.setPC(pc - offset + 1);
                             rcpu.decrTMRandCheck();
@@ -845,13 +995,18 @@ public class VirtualMachine {
                 }
                 
             case "HALT":
+                if (rcpu.mdProperty().get().equals("0")){
+                    rcpu.mdProperty().setValue("1");
+                    return true;
+                }
+                
                 System.out.println("\u001B[31mPasiekta programos pabaiga.\u001B[0m");
                 rcpu.decrTMRandCheck();
-                rcpu.mdProperty().setValue("1");
+                
                 rcpu.siProperty().setValue("7");
-                rcpu.mdProperty().setValue("0");
-                vcpu.setPC(pc+1);
-                return true;
+                //rcpu.mdProperty().setValue("0");
+                //vcpu.setPC(pc+1);
+                return false;
         }
         
         // neegzistuojanti komanda
@@ -859,7 +1014,7 @@ public class VirtualMachine {
         rcpu.piProperty().setValue("2");
         stdout.setText("[INT] Neteisingas op. kodas [INT]");
         rcpu.mdProperty().setValue("0");
-        throw new IOException("Neteisingas op. kodas");
+        throw new IOException("[INT] Neteisingas op. kodas [INT]");
     }
     
     private String arrangeFlags(boolean sign, boolean zero, boolean carry){
