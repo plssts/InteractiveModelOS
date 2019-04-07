@@ -110,7 +110,7 @@ public class InteractiveModelOS extends Application {
             vmMem.add(blockNum, 17, block);
         }
         
-        Button startProg = new Button("Paleisti programa");
+        Button startProg = new Button("Leisti programa");
         startProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -146,7 +146,7 @@ public class InteractiveModelOS extends Application {
             }
         });
         
-        Button reset = new Button("Atstatyti programa");
+        Button reset = new Button("Isvalyti");
         reset.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -158,6 +158,7 @@ public class InteractiveModelOS extends Application {
                 rcpu.mdProperty().setValue("0");
                 rcpu.siProperty().setValue("0");
                 rcpu.piProperty().setValue("0");
+                rcpu.shmProperty().setValue("0000000000000000");
                 stdout.setText("");
             }
         });
@@ -196,6 +197,7 @@ public class InteractiveModelOS extends Application {
                 rcpu.mdProperty().setValue("0");
                 rcpu.siProperty().setValue("0");
                 rcpu.piProperty().setValue("0");
+                rcpu.shmProperty().setValue("0000000000000000");
             }
         });
         

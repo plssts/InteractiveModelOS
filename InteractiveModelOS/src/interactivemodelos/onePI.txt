@@ -1,0 +1,3 @@
+DATA
+CODE
+MOV AXPO

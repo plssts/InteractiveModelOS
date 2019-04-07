@@ -47,6 +47,11 @@ public class VirtualMachine {
     private boolean finaliseSHU = false;
     private int nextSHword = -1;
     
+    private boolean shrNeedsStart = false;
+    private boolean shwNeedsStart = false;
+    private boolean finaliseSHR = false;
+    private boolean finaliseSHW = false;
+    
     public VirtualMachine(){ 
         // Pirminis atminties uzkrovimas po 4 baitus
         for (int i = 0; i < 16; ++i){
@@ -110,6 +115,10 @@ public class VirtualMachine {
         finaliseSHL = false;
         finaliseSHU = false;
         nextSHword = -1;
+        shrNeedsStart = false;
+        shwNeedsStart = false;
+        finaliseSHR = false;
+        finaliseSHW = false;
         //contentProcessed = false;
     }
     
@@ -120,6 +129,7 @@ public class VirtualMachine {
     
     public boolean executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
         if (nonCommandStep){
+            //System.out.println("NON-CMD");
             if (setModeTo0){
                 rcpu.mdProperty().setValue("0");
                 //setModeTo0 = false;
@@ -257,7 +267,29 @@ public class VirtualMachine {
                 setModeTo0 = true;
                 return true;
             }
-            //return true;
+            
+            if (shrNeedsStart){
+                nonCommandStep = false;
+                shrNeedsStart = false;
+                return true;
+            }
+            if (shwNeedsStart){
+                nonCommandStep = false;
+                shwNeedsStart = false;
+                return true;
+            }
+            if (finaliseSHR){
+                finaliseSHR = false;
+                //System.out.println("YUP");
+                setModeTo0 = true;
+                return true;
+            }
+            if (finaliseSHW){
+                finaliseSHW = false;
+                //System.out.println("YUP");
+                setModeTo0 = true;
+                return true;
+            }
         }
         
         int pc = Integer.parseInt(vcpu.pcProperty().getValue(), 16);
@@ -1162,60 +1194,103 @@ public class VirtualMachine {
                     }
 
                 case "SHW ":
-                    ++pc;
-                    vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
-                    pcWord = pc % 16;
-                    registers = memory[pcBlock][pcWord].get();
-                    int sharedWord = Integer.parseInt(registers.substring(1, 2), 16);
-                    if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
-                        rcpu.mdProperty().setValue("1");
-                        rcpu.siProperty().setValue("4");
-                        first = rcpu.smt().memoryProperty(sharedWord);
-                        second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
-                        first.setValue(second.get());
-                        rcpu.decrTMRandCheck();
-                        vcpu.setPC(pc+1);
-                        rcpu.siProperty().setValue("0");
-                        rcpu.mdProperty().setValue("0");
+                    if (rcpu.siProperty().get().equals("0") && !contentProcessed){
+                        nextSIval = "4";
+                        nonCommandStep = true;
+                        setModeTo1 = true;
+                        shwNeedsStart = true;
                         return true;
-                    } else {
-                        // dirbama su neuzrakinta atmintimi
-                        rcpu.decrTMRandCheck();
-                        rcpu.mdProperty().setValue("1");
-                        rcpu.piProperty().setValue("5");
-                        stdout.setText("[INT] Bandymas naudotis bendrąją atmintimi jos neužrakinus [INT]");
-                        rcpu.mdProperty().setValue("0");
-                        throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
                     }
+                    
+                    if (!contentProcessed){
+                        contentProcessed = true;
+                        ++pc;
+                        //vcpu.setPC(pc);
+                        pcBlock = (pc / 16) + 2;
+                        pcWord = pc % 16;
+                        registers = memory[pcBlock][pcWord].get();
+                        int sharedWord = Integer.parseInt(registers.substring(1, 2), 16);
+                        if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
+                            //rcpu.mdProperty().setValue("1");
+                            //rcpu.siProperty().setValue("4");
+                            first = rcpu.smt().memoryProperty(sharedWord);
+                            second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
+                            first.setValue(second.get());
+                            
+                            //rcpu.siProperty().setValue("0");
+                            //rcpu.mdProperty().setValue("0");
+                            return true;
+                        } else {
+                            // dirbama su neuzrakinta atmintimi
+                            rcpu.decrTMRandCheck();
+                            nextPIval = "5";
+                            nonCommandStep = true;
+                            //setModeTo1 = true;
+                            return true;
+                            //rcpu.mdProperty().setValue("1");
+                            //rcpu.piProperty().setValue("5");
+                            //stdout.setText("[INT] Bandymas naudotis bendrąją atmintimi jos neužrakinus [INT]");
+                            //rcpu.mdProperty().setValue("0");
+                            //throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
+                        }
+                    }
+                    rcpu.decrTMRandCheck();
+                    vcpu.setPC(pc+2);
+                    contentProcessed = false;
+                    nonCommandStep = true;
+                    nextSIval = "0";
+                    finaliseSHW = true;
+                    //System.out.println("SHW should set MD to 0");
+                    return true;
 
                 case "SHR ":
-                    ++pc;
-                    vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
-                    pcWord = pc % 16;
-                    registers = memory[pcBlock][pcWord].get();
-                    sharedWord = Integer.parseInt(registers.substring(3, 4), 16);
-                    if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
-                        rcpu.mdProperty().setValue("1");
-                        rcpu.siProperty().setValue("3");
-                        second = rcpu.smt().memoryProperty(sharedWord);
-                        first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
-                        first.setValue(second.get());
-                        rcpu.decrTMRandCheck();
-                        vcpu.setPC(pc+1);
-                        rcpu.siProperty().setValue("0");
-                        rcpu.mdProperty().setValue("0");
+                    if (rcpu.siProperty().get().equals("0") && !contentProcessed){
+                        nextSIval = "3";
+                        nonCommandStep = true;
+                        setModeTo1 = true;
+                        shrNeedsStart = true;
                         return true;
-                    } else {
-                        // dirbama su neuzrakinta atmintimi
-                        rcpu.decrTMRandCheck();
-                        rcpu.mdProperty().setValue("1");
-                        rcpu.piProperty().setValue("5");
-                        stdout.setText("[INT] Bandymas naudotis bendrąją atmintimi jos neužrakinus [INT]");
-                        rcpu.mdProperty().setValue("0");
-                        throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
                     }
+                    
+                    if (!contentProcessed){
+                        contentProcessed = true;
+                        ++pc;
+                        //vcpu.setPC(pc);
+                        pcBlock = (pc / 16) + 2;
+                        pcWord = pc % 16;
+                        registers = memory[pcBlock][pcWord].get();
+                        int sharedWord = Integer.parseInt(registers.substring(3, 4), 16);
+                        if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
+                            //rcpu.mdProperty().setValue("1");
+                            //rcpu.siProperty().setValue("3");
+                            second = rcpu.smt().memoryProperty(sharedWord);
+                            first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
+                            first.setValue(second.get());
+                            //rcpu.siProperty().setValue("0");
+                            //rcpu.mdProperty().setValue("0");
+                            return true;
+                        } else {
+                            // dirbama su neuzrakinta atmintimi
+                            rcpu.decrTMRandCheck();
+                            nextPIval = "5";
+                            nonCommandStep = true;
+                            //setModeTo1 = true;
+                            return true;
+                            //rcpu.mdProperty().setValue("1");
+                            //rcpu.piProperty().setValue("5");
+                            //stdout.setText("[INT] Bandymas naudotis bendrąją atmintimi jos neužrakinus [INT]");
+                            //md.Property().setValue("0");
+                            //throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
+                        }
+                    }
+                    rcpu.decrTMRandCheck();
+                    vcpu.setPC(pc+2);
+                    contentProcessed = false;
+                    nonCommandStep = true;
+                    nextSIval = "0";
+                    finaliseSHR = true;
+                    //System.out.println("SHR should set MD to 0");
+                    return true;
 
                 case "HALT":
                     if (rcpu.mdProperty().get().equals("0")){
