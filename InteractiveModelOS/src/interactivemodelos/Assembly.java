@@ -47,14 +47,14 @@ public class Assembly {
             if (line.equals("CODE")){
                 commands.add("[STC]"); // switch-to-code prasymas kraunant i atminti
                 parseCodeGracefully = true; // pazymime, kad mes radome CODE segmenta, o ne siaip pateikiame faila i parseCode()
-                return; // Eisime i  CODE segmento parsinima
+                return; // Eisime i CODE segmento parsinima
             }
             
             String[] all = line.split(", 0");
             int wordCount = Integer.parseInt(line.split("w")[0].trim());
             dataWords += wordCount;
-            if (dataWords > 32){
-                throw new IOException("DATA atminties dydis virsija 2 blokus");
+            if (dataWords > 256){
+                throw new IOException("DATA atminties dydis virsija 16 bloku");
             }
             
             // Jeigu cia yra argumentas-stringas

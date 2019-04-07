@@ -22,8 +22,30 @@ public class VirtualMachine {
     private boolean setModeTo0 = false;
     private boolean setModeTo1 = false;
     private boolean throwableInt = false;
-    private String nextPIval = "0";
-    private String nextSIval = "0";
+    private String nextPIval = "";
+    private String nextSIval = "";
+    
+    private boolean wwChannelOpened = false;
+    private boolean wwNeedsOpening = false;
+    private boolean wwNeedsClosing = false;
+    
+    private boolean contentProcessed = false;
+    
+    private boolean rwChannelOpened = false;
+    private boolean rwNeedsOpening = false;
+    private boolean rwNeedsClosing = false;
+    
+    private boolean shmNeedsLocking = false;
+    private boolean shmNeedsUnlocking = false;
+    
+    // nors galetu logiskai buti vienas, tik priesingu reiksmiu,
+    // siuo atveju prasme programine, o ne logines busenos
+    private boolean shmLocked = false;
+    private boolean shmUnlocked = false;
+    
+    private boolean finaliseSHL = false;
+    private boolean finaliseSHU = false;
+    private int nextSHword = -1;
     
     public VirtualMachine(){ 
         // Pirminis atminties uzkrovimas po 4 baitus
@@ -73,8 +95,27 @@ public class VirtualMachine {
         setModeTo0 = false;
         setModeTo1 = false;
         throwableInt = false;
-        nextPIval = "0";
-        nextSIval = "0";
+        nextPIval = "";
+        nextSIval = "";
+        wwChannelOpened = false;
+        wwNeedsOpening = false;
+        wwNeedsClosing = false;
+        rwChannelOpened = false;
+        rwNeedsOpening = false;
+        rwNeedsClosing = false;
+        shmNeedsLocking = false;
+        shmNeedsUnlocking = false;
+        shmLocked = false;
+        shmUnlocked = false;
+        finaliseSHL = false;
+        finaliseSHU = false;
+        nextSHword = -1;
+        //contentProcessed = false;
+    }
+    
+    public void reset(){
+        clearBooleans();
+        contentProcessed = false;
     }
     
     public boolean executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
@@ -83,7 +124,7 @@ public class VirtualMachine {
                 rcpu.mdProperty().setValue("0");
                 //setModeTo0 = false;
                 //nonCommandStep = false;
-                clearBooleans();
+                //clearBooleans();
                 if (throwableInt){
                     String message = "";
                     switch(nextPIval){
@@ -102,14 +143,17 @@ public class VirtualMachine {
                     }
                     throw new IOException("[INT] " + message + " [INT]");
                 }
+                clearBooleans();
                 return true;
                 
-            } else if (setModeTo1){
+            } 
+            if (setModeTo1){
                 rcpu.mdProperty().setValue("1");
                 setModeTo1 = false;
                 return true;
                 
-            } else if (!nextPIval.isEmpty()){
+            } 
+            if (!nextPIval.isEmpty()){
                 rcpu.piProperty().setValue(nextPIval);
                 setModeTo0 = true;
                 if (!nextPIval.equals("4")){
@@ -120,14 +164,100 @@ public class VirtualMachine {
                 }
                 return true;
                 
-            } else if (!nextSIval.isEmpty()){
+            } 
+            if (!nextSIval.isEmpty()){
                 rcpu.siProperty().setValue(nextSIval);
-                setModeTo0 = true;
-                throwableInt = false;
+                //setModeTo0 = true;
+                //if (nextSIval.equals("0")){
+                    //setModeTo0 = true;
+                //} else {
+                    //nonCommandStep = false;
+                //}
+                nextSIval = "";
                 return true;
                 
             }
-            return true;
+            if (wwNeedsOpening){
+                wwChannelOpened = true;
+                wwNeedsOpening = false;
+                nonCommandStep = false;
+                char[] temp = rcpu.chProperty().get().toCharArray();
+                temp[1] = '1';
+                rcpu.chProperty().setValue(String.valueOf(temp));
+                return true;
+                
+            }
+            if (wwNeedsClosing){
+                wwChannelOpened = false;
+                wwNeedsClosing = false;
+                setModeTo0 = true;
+                char[] temp = rcpu.chProperty().get().toCharArray();
+                temp[1] = '0';
+                rcpu.chProperty().setValue(String.valueOf(temp));
+                return true;
+            }
+            
+            if (rwNeedsOpening){
+                rwChannelOpened = true;
+                rwNeedsOpening = false;
+                nonCommandStep = false;
+                char[] temp = rcpu.chProperty().get().toCharArray();
+                temp[0] = '1';
+                rcpu.chProperty().setValue(String.valueOf(temp));
+                return true;
+                
+            }
+            if (rwNeedsClosing){
+                rwChannelOpened = false;
+                rwNeedsClosing = false;
+                setModeTo0 = true;
+                char[] temp = rcpu.chProperty().get().toCharArray();
+                temp[0] = '0';
+                rcpu.chProperty().setValue(String.valueOf(temp));
+                return true;
+            }
+            
+            if (shmNeedsLocking){
+                shmLocked = true;
+                shmNeedsLocking = false;
+                nonCommandStep = false;
+                //finaliseSHL = true;
+                char[] temp = rcpu.shmProperty().get().toCharArray();
+                temp[nextSHword] = '1';
+                rcpu.shmProperty().setValue(String.valueOf(temp));
+                return true;
+                
+            }
+            if (shmNeedsUnlocking){
+                shmUnlocked = true;
+                shmNeedsUnlocking = false;
+                nonCommandStep = false;
+                //finaliseSHL = true;
+                char[] temp = rcpu.shmProperty().get().toCharArray();
+                temp[nextSHword] = '0';
+                rcpu.shmProperty().setValue(String.valueOf(temp));
+                return true;
+                
+            }
+            
+            if (finaliseSHL){
+                /*if (nextSIval.equals("0")){
+                    return true;
+                }*/
+                finaliseSHL = false;
+                setModeTo0 = true;
+                return true;
+            }
+            
+            if (finaliseSHU){
+                /*if (nextSIval.equals("0")){
+                    return true;
+                }*/
+                finaliseSHU = false;
+                setModeTo0 = true;
+                return true;
+            }
+            //return true;
         }
         
         int pc = Integer.parseInt(vcpu.pcProperty().getValue(), 16);
@@ -141,880 +271,986 @@ public class VirtualMachine {
         
         System.out.println(position);
         
-        if (position.startsWith("J+")){
-            int offset = Integer.parseInt(position.substring(2, 4), 16);
-            if ((pc + offset + 1) > 255){
-                // pc 'islekia' is virtualios atminties reziu
-                nextPIval = "1";
-                nonCommandStep = true;
-                setModeTo1 = true;
-                rcpu.decrTMRandCheck();
-                return true;
-            }
-            vcpu.setPC(pc + offset + 1);
-            rcpu.decrTMRandCheck();
-            return true;
-        }
-        if (position.startsWith("J-")){
-            int offset = Integer.parseInt(position.substring(2, 4), 16);
-            if ((pc - offset + 1) < 0){
-                // pc
-                nextPIval = "1";
-                nonCommandStep = true;
-                setModeTo1 = true;
-                rcpu.decrTMRandCheck();
-                return true;
-            }
-            vcpu.setPC(pc - offset + 1);
-            rcpu.decrTMRandCheck();
-            return true;
-        }
-        
-        if (position.startsWith("WW")){
-            rcpu.mdProperty().setValue("1");
-            rcpu.siProperty().setValue("2");
-            char[] temp = rcpu.chProperty().get().toCharArray();
-            temp[1] = '1';
-            rcpu.chProperty().setValue(String.valueOf(temp));
-            int srcBlock = -1, srcWord = -1;
-            srcBlock = Integer.parseInt(position.substring(2, 3), 16);
-            srcWord = Integer.parseInt(position.substring(3, 4), 16);
-            
-            stdout.appendText(memory[srcBlock][srcWord].get());
-            vcpu.setPC(pc+1);
-            temp = rcpu.chProperty().get().toCharArray();
-            temp[1] = '0';
-            rcpu.chProperty().setValue(String.valueOf(temp));
-            rcpu.decrTMRandCheck();
-            rcpu.siProperty().setValue("0");
-            rcpu.mdProperty().setValue("0");
-            return true;
-        }
-        if (position.startsWith("RW")){
-            rcpu.mdProperty().setValue("1");
-            rcpu.siProperty().setValue("1");
-            char[] temp = rcpu.chProperty().get().toCharArray();
-            temp[0] = '1';
-            rcpu.chProperty().setValue(String.valueOf(temp));
-            int destBlock = -1, destWord = -1;
-            destBlock = Integer.parseInt(position.substring(2, 3), 16);
-            destWord = Integer.parseInt(position.substring(3, 4), 16);
-            
-            TextInputDialog dialog = new TextInputDialog();
-            dialog.setResizable(false);
-            dialog.setHeaderText("");
-            dialog.setWidth(10);
-            dialog.setGraphic(null);
-            dialog.setTitle("Ivesties irenginys");
-            stdinStatus.setTextFill(Color.DARKGREEN);
-            stdinStatus.setText("AKTYVUS");
-            dialog.showAndWait();
-            stdinStatus.setText("NEAKTYVUS");
-            stdinStatus.setTextFill(Color.DARKRED);
-            String input = dialog.getEditor().getText();
-            System.out.println(input);
-            temp = rcpu.chProperty().get().toCharArray();
-            temp[0] = '0';
-            rcpu.chProperty().setValue(String.valueOf(temp));
-            if (input.startsWith("\"")){ // Ivestas string, ne skaicius
-                if (input.endsWith("\"") && input.length() < 7){
-                    memory[destBlock][destWord].setValue(input.substring(1, input.length() - 1));
-                }
-                else {
-                    throw new IOException("Neteisingas eilutes formatavimas arba ilgis didesnis uz 4 baitus");
-                }
-            }
-            else if (input.length() < 9){ // Ivestas skaicius (16-aineje sistemoje)
-                memory[destBlock][destWord].setValue(Integer.toHexString((int)Long.parseLong(input, 16)));
-            } else {
-                throw new IOException("Neteisingas eilutes formatavimas arba ilgis didesnis uz 4 baitus");
-            }
-            
-            vcpu.setPC(pc+1);
-            rcpu.decrTMRandCheck();
-            rcpu.siProperty().setValue("0");
-            rcpu.mdProperty().setValue("0");
-            return true;
-        }
-        
-        if (position.startsWith("SHL")){
-            int id = Integer.parseInt(position.substring(3, 4), 16);
-            String current = rcpu.shmProperty().get();
-            if (current.charAt(id) == '1'){
-                // jau uzrakinta
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                return true;
-            } else {
-                rcpu.mdProperty().setValue("1");
-                rcpu.siProperty().setValue("5");
-                char[] arr = current.toCharArray();
-                arr[id] = '1';
-                String result = String.valueOf(arr);
-                rcpu.shmProperty().setValue(result);
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                rcpu.siProperty().setValue("0");
-                rcpu.mdProperty().setValue("0");
-                return true;
-            }
-        }
-        if (position.startsWith("SHU")){
-            int id = Integer.parseInt(position.substring(3, 4), 16);
-            String current = rcpu.shmProperty().get();
-            if (current.charAt(id) == '0'){
-                // jau atrakinta
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                return true;
-            } else {
-                rcpu.mdProperty().setValue("1");
-                rcpu.siProperty().setValue("6");
-                char[] arr = current.toCharArray();
-                arr[id] = '0';
-                String result = String.valueOf(arr);
-                rcpu.shmProperty().setValue(result);
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                rcpu.siProperty().setValue("0");
-                rcpu.mdProperty().setValue("0");
-                return true;
-            }
-        }
-        
-        switch(position){
-            case "ADD ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                String registers = memory[pcBlock][pcWord].get();
-                StringProperty first = null, second = null;
-                switch (registers.substring(0, 2)){ // rezultato registras
-                    case "AX":
-                        first = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        first = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys ADD registrai");
-                }
-                switch (registers.substring(2, 4)){ // antrasis operandas
-                    case "AX":
-                        second = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        second = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys ADD registrai");
-                }
-                int result = (int)Long.parseLong(first.get(), 16) + (int)Long.parseLong(second.get(), 16);
-                boolean sign = false, zero = false, carry = false;
-                if (result < (int)Long.parseLong(first.get(), 16) || result < (int)Long.parseLong(second.get(), 16)){
-                    carry = true;
-                    //rcpu.mdProperty().setValue("1");
-                    //rcpu.piProperty().setValue("4");
-                    //rcpu.mdProperty().setValue("0");
-                }
-                if (result == 0){
-                    zero = true;
-                }
-                if (result < 0){
-                    sign = true;
-                }
-                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
-                
-                if (carry){
+        try {
+            if (position.startsWith("J+")){
+                int offset = Integer.parseInt(position.substring(2, 4), 16);
+                if ((pc + offset + 1) > 255){
+                    // pc 'islekia' is virtualios atminties reziu
+                    nextPIval = "1";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    nextPIval = "4";
+                    rcpu.decrTMRandCheck();
+                    return true;
+                }
+                vcpu.setPC(pc + offset + 1);
+                rcpu.decrTMRandCheck();
+                return true;
+            }
+            if (position.startsWith("J-")){
+                int offset = Integer.parseInt(position.substring(2, 4), 16);
+                if ((pc - offset + 1) < 0){
+                    // pc
+                    nextPIval = "1";
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    rcpu.decrTMRandCheck();
+                    return true;
+                }
+                vcpu.setPC(pc - offset + 1);
+                rcpu.decrTMRandCheck();
+                return true;
+            }
+
+            if (position.startsWith("WW")){
+                if (rcpu.siProperty().get().equals("0") && !contentProcessed){
+                    nextSIval = "2";
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    return true;
                 }
                 
-                first.setValue(Integer.toHexString(result));
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
+                //System.out.println("GONNA OPEN");
+                if (!wwChannelOpened && !contentProcessed){
+                    wwNeedsOpening = true;
+                    nonCommandStep = true;
+                    return true;
+                }
+                //System.out.println("OPENED");
                 //rcpu.mdProperty().setValue("1");
-                //rcpu.piProperty().setValue("0");
+                //rcpu.siProperty().setValue("2");
+                //char[] temp = rcpu.chProperty().get().toCharArray();
+                //temp[1] = '1';
+                //rcpu.chProperty().setValue(String.valueOf(temp));
+                if (!contentProcessed){
+                    int srcBlock = -1, srcWord = -1;
+                    srcBlock = Integer.parseInt(position.substring(2, 3), 16);
+                    srcWord = Integer.parseInt(position.substring(3, 4), 16);
+
+                    stdout.appendText(memory[srcBlock][srcWord].get());
+                    contentProcessed = true;
+                    return true;
+                }
+                
+                if (wwChannelOpened){
+                    wwNeedsClosing = true;
+                    nonCommandStep = true;
+                    nextSIval = "0";
+                    return true;
+                }
+                
+                vcpu.setPC(pc+1);
+                contentProcessed = false;
+                //temp = rcpu.chProperty().get().toCharArray();
+                //temp[1] = '0';
+                //rcpu.chProperty().setValue(String.valueOf(temp));
+                rcpu.decrTMRandCheck();
+                //rcpu.siProperty().setValue("0");
                 //rcpu.mdProperty().setValue("0");
-                return true;
                 
-            case "SUB ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                first = null; second = null;
-                switch (registers.substring(0, 2)){ // rezultato registras
-                    case "AX":
-                        first = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        first = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys SUB registrai");
-                }
-                switch (registers.substring(2, 4)){ // antrasis operandas
-                    case "AX":
-                        second = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        second = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys SUB registrai");
-                }
-                result = (int)Long.parseLong(first.get(), 16) - (int)Long.parseLong(second.get(), 16);
-                sign = false; zero = false; carry = false;
-                if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
-                    carry = true;
-                }
-                if (result == 0){
-                    zero = true;
-                }
-                if (result < 0){
-                    sign = true;
-                }
-                // perpildymo pertraukimas
-                if (result > (int)Long.parseLong(first.get(), 16)){
-                    //rcpu.mdProperty().setValue("1");
-                    //rcpu.piProperty().setValue("4");
-                    //rcpu.mdProperty().setValue("0");
+                return true;
+            }
+            if (position.startsWith("RW")){
+                if (rcpu.siProperty().get().equals("0") && !contentProcessed){
+                    nextSIval = "1";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    nextPIval = "4";
+                    return true;
                 }
-                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
-                first.setValue(Integer.toHexString(result));
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                // perpildymo pertraukimo atstatymas
-                /*if (result > (int)Long.parseLong(first.get(), 16)){
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.piProperty().setValue("0");
-                    rcpu.mdProperty().setValue("0");
-                }*/
-                return true;
-                
-            case "CMP ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                first = null; second = null;
-                switch (registers.substring(0, 2)){ // pirmasis operandas
-                    case "AX":
-                        first = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        first = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys CMP registrai");
-                }
-                switch (registers.substring(2, 4)){ // antrasis operandas
-                    case "AX":
-                        second = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        second = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys CMP registrai");
-                }
-                sign = false; zero = false; carry = false;
-                if ((int)Long.parseLong(first.get(), 16) == (int)Long.parseLong(second.get(), 16)){
-                    zero = true;
-                } else if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
-                    zero = false; carry = true;
-                } else if ((int)Long.parseLong(first.get(), 16) > (int)Long.parseLong(second.get(), 16)){
-                    zero = false; carry = false;
-                } else if ((int)Long.parseLong(first.get(), 16) <= (int)Long.parseLong(second.get(), 16)){
-                    zero = true; carry = true;
-                } else if ((int)Long.parseLong(first.get(), 16) >= (int)Long.parseLong(second.get(), 16)){
-                    carry = false;
-                }
-                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                return true;
-                
-            case "MUL ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                first = null; second = null;
-                switch (registers.substring(0, 2)){ // rezultato registras
-                    case "AX":
-                        first = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        first = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys MUL registrai");
-                }
-                switch (registers.substring(2, 4)){ // antrasis operandas
-                    case "AX":
-                        second = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        second = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys MUL registrai");
-                }
-                result = (int)Long.parseLong(first.get(), 16) * (int)Long.parseLong(second.get(), 16);
-                sign = false; zero = false; carry = false;
-                if (result < (int)Long.parseLong(first.get(), 16) || result < (int)Long.parseLong(second.get(), 16)){
-                    carry = true;
-                    //rcpu.mdProperty().setValue("1");
-                    //rcpu.piProperty().setValue("4");
-                    //rcpu.mdProperty().setValue("0");
-                }
-                if (result == 0){
-                    zero = true;
-                }
-                if (result < 0){
-                    sign = true;
-                }
-                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
-                
-                if (carry){
-                    nonCommandStep = true;
-                    setModeTo1 = true;
-                    nextPIval = "4";
-                }
-                
-                first.setValue(Integer.toHexString(result));
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
                 //rcpu.mdProperty().setValue("1");
-                //rcpu.piProperty().setValue("4");
+                //rcpu.siProperty().setValue("1");
+                if (!rwChannelOpened && !contentProcessed){
+                    rwNeedsOpening = true;
+                    nonCommandStep = true;
+                    return true;
+                }
+                //char[] temp = rcpu.chProperty().get().toCharArray();
+                //temp[0] = '1';
+                //rcpu.chProperty().setValue(String.valueOf(temp));
+                if (!contentProcessed){
+                    int destBlock = -1, destWord = -1;
+                    destBlock = Integer.parseInt(position.substring(2, 3), 16);
+                    destWord = Integer.parseInt(position.substring(3, 4), 16);
+
+                    TextInputDialog dialog = new TextInputDialog();
+                    dialog.setResizable(false);
+                    dialog.setHeaderText("");
+                    dialog.setWidth(10);
+                    dialog.setGraphic(null);
+                    dialog.setTitle("Ivesties irenginys");
+                    stdinStatus.setTextFill(Color.DARKGREEN);
+                    stdinStatus.setText("AKTYVUS");
+                    dialog.showAndWait();
+                    stdinStatus.setText("NEAKTYVUS");
+                    stdinStatus.setTextFill(Color.DARKRED);
+                    String input = dialog.getEditor().getText();
+                    System.out.println(input);
+                    //temp = rcpu.chProperty().get().toCharArray();
+                    //temp[0] = '0';
+                    //rcpu.chProperty().setValue(String.valueOf(temp));
+                    if (input.startsWith("\"")){ // Ivestas string, ne skaicius
+                        if (input.endsWith("\"") && input.length() < 7){
+                            memory[destBlock][destWord].setValue(input.substring(1, input.length() - 1));
+                        }
+                        else {
+                            throw new IOException("Neteisingas eilutes formatavimas arba ilgis didesnis uz 4 baitus");
+                        }
+                    }
+                    else if (input.length() < 9){ // Ivestas skaicius (16-aineje sistemoje)
+                        memory[destBlock][destWord].setValue(Integer.toHexString((int)Long.parseLong(input, 16)));
+                    } else {
+                        throw new IOException("Neteisingas eilutes formatavimas arba ilgis didesnis uz 4 baitus");
+                    }
+                    contentProcessed = true;
+                    return true;
+                }
+
+                if (rwChannelOpened){
+                    rwNeedsClosing = true;
+                    nonCommandStep = true;
+                    nextSIval = "0";
+                    return true;
+                }
+                
+                vcpu.setPC(pc+1);
+                contentProcessed = false;
+                rcpu.decrTMRandCheck();
+                //rcpu.siProperty().setValue("0");
                 //rcpu.mdProperty().setValue("0");
                 return true;
+            }
+
+            if (position.startsWith("SHL")){
+                int id = Integer.parseInt(position.substring(3, 4), 16);
+                nextSHword = id;
+                String current = rcpu.shmProperty().get();
                 
-            case "DIV ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                first = null; second = null;
-                switch (registers.substring(0, 2)){ // rezultato registras
-                    case "AX":
-                        first = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        first = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys DIV registrai");
-                }
-                switch (registers.substring(2, 4)){ // antrasis operandas
-                    case "AX":
-                        second = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        second = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys DIV registrai");
-                }
-                if ((int)Long.parseLong(second.get(), 16) == 0){
-                    nextPIval = "3";
-                    nonCommandStep = true;
-                    setModeTo1 = true;
-                    return true;
-                    //throw new IOException("Neteisingas priskyrimas");
-                }
-                
-                result = (int)Long.parseLong(first.get(), 16) / (int)Long.parseLong(second.get(), 16);
-                sign = false; zero = false; carry = false;
-                if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
-                    carry = true;
-                }
-                if (result == 0){
-                    zero = true;
-                }
-                if (result < 0){
-                    sign = true;
-                }
-                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
-                first.setValue(Integer.toHexString(result));
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                return true;
-                
-            case "MOD ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                first = null; second = null;
-                switch (registers.substring(0, 2)){ // rezultato registras
-                    case "AX":
-                        first = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        first = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys MOD registrai");
-                }
-                switch (registers.substring(2, 4)){ // antrasis operandas
-                    case "AX":
-                        second = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        second = vcpu.bxProperty();
-                        break;
-                    default:
-                        throw new IOException("Neegzistuojantys MOD registrai");
-                }
-                if ((int)Long.parseLong(second.get(), 16) == 0){
-                    nextPIval = "3";
-                    nonCommandStep = true;
-                    setModeTo1 = true;
-                    return true;
-                    //throw new IOException("Daliklis yra 0");
-                }
-                
-                result = (int)Long.parseLong(first.get(), 16) % (int)Long.parseLong(second.get(), 16);
-                sign = false; zero = false; carry = false;
-                if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
-                    carry = true;
-                }
-                if (result == 0){
-                    zero = true;
-                }
-                if (result < 0){
-                    sign = true;
-                }
-                vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
-                first.setValue(Integer.toHexString(result));
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                return true;
-                
-            case "MOV ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                first = null; second = null;
-                switch (registers.substring(0, 2)){ // rezultato registras/atmintis
-                    case "AX":
-                        first = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        first = vcpu.bxProperty();
-                        break;
-                    default:
-                        try {
-                            first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
-                        } catch(NumberFormatException ex){
-                            nextPIval = "1";
-                            nonCommandStep = true;
-                            setModeTo1 = true;
-                            return true;
-                        }
-                }
-                switch (registers.substring(2, 4)){ // antrasis operandas
-                    case "AX":
-                        second = vcpu.axProperty();
-                        break;
-                    case "BX":
-                        second = vcpu.bxProperty();
-                        break;
-                    default:
-                        try {
-                            second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
-                        } catch(NumberFormatException ex){
-                            nextPIval = "1";
-                            nonCommandStep = true;
-                            setModeTo1 = true;
-                            return true;
-                        }
-                }
-                first.setValue(second.get());
-                vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
-                return true;
-                
-            case "MOVC":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                String fword = memory[pcBlock][pcWord].get();
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                String sword = memory[pcBlock][pcWord].get();
-                String constant = fword + sword;
-                try {
-                    vcpu.axProperty().setValue(Integer.toHexString((int)Long.parseLong(constant, 16)));
-                } catch(NumberFormatException ex){
-                    nextPIval = "3";
+                if (rcpu.siProperty().get().equals("0")){
+                    nextSIval = "5";
                     nonCommandStep = true;
                     setModeTo1 = true;
                     return true;
                 }
+                
+                if (!shmLocked){
+                    shmNeedsLocking = true;
+                    nonCommandStep = true;
+                    return true;
+                }
+                
+                //if (!finaliseSHL){
+                finaliseSHL = true;
+                
+                //}
+
+                //rcpu.mdProperty().setValue("1");
+                //rcpu.siProperty().setValue("5");
+                //char[] arr = current.toCharArray();
+                //arr[id] = '1';
+                //String result = String.valueOf(arr);
+                //rcpu.shmProperty().setValue(result);
+                
                 vcpu.setPC(pc+1);
                 rcpu.decrTMRandCheck();
+                nonCommandStep = true;
+                nextSIval = "0";
                 return true;
-                
-            case "JEQL":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                switch (registers.substring(1, 2)){ // + arba -
-                    case "+":
-                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc + offset + 1) > 255){
-                                // pc 'islekia' is atminties reziu
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc + offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        
-                    case "-":
-                        offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc - offset + 1) < 0){
-                                // pc 
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc - offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                    default:
-                        throw new IOException("Neteisingas poslinkio formatas");
-                }
-                
-            case "JAEQ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                switch (registers.substring(1, 2)){ // + arba -
-                    case "+":
-                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
-                            if ((pc + offset + 1) > 255){
-                                // pc 'islekia' is atminties reziu
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc + offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        
-                    case "-":
-                        offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
-                            if ((pc - offset + 1) < 0){
-                                // pc
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc - offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                    default:
-                        throw new IOException("Neteisingas poslinkio formatas");
-                }
-                
-            case "JBEQ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                switch (registers.substring(1, 2)){ // + arba -
-                    case "+":
-                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
-                            (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
-                            (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc + offset + 1) > 255){
-                                // pc 'islekia' is atminties reziu
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc + offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        
-                    case "-":
-                        offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
-                            (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
-                            (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
-                            if ((pc - offset + 1) < 0){
-                                // pc
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc - offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                    default:
-                        throw new IOException("Neteisingas poslinkio formatas");
-                }
-                
-            case "JABV":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                switch (registers.substring(1, 2)){ // + arba -
-                    case "+":
-                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
-                            if ((pc + offset + 1) > 255){
-                                // pc 'islekia' is atminties reziu
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc + offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        
-                    case "-":
-                        offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
-                            if ((pc - offset + 1) < 0){
-                                // pc
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc - offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                    default:
-                        throw new IOException("Neteisingas poslinkio formatas");
-                }
-                
-            case "JBLW":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                switch (registers.substring(1, 2)){ // + arba -
-                    case "+":
-                        int offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
-                            if ((pc + offset + 1) > 255){
-                                // pc 'islekia' is atminties reziu
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc + offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        
-                    case "-":
-                        offset = Integer.parseInt(registers.substring(2, 4), 16);
-                        if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
-                            if ((pc - offset + 1) < 0){
-                                // pc
-                                nextPIval = "1";
-                                nonCommandStep = true;
-                                setModeTo1 = true;
-                                rcpu.decrTMRandCheck();
-                                return true;
-                            }
-                            vcpu.setPC(pc - offset + 1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                        else {
-                            vcpu.setPC(pc+1);
-                            rcpu.decrTMRandCheck();
-                            return true;
-                        }
-                    default:
-                        throw new IOException("Neteisingas poslinkio formatas");
-                }
-                
-            case "SHW ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                int sharedWord = Integer.parseInt(registers.substring(1, 2), 16);
-                if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.siProperty().setValue("4");
-                    first = rcpu.smt().memoryProperty(sharedWord);
-                    second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
-                    first.setValue(second.get());
-                    rcpu.decrTMRandCheck();
-                    vcpu.setPC(pc+1);
-                    rcpu.siProperty().setValue("0");
-                    rcpu.mdProperty().setValue("0");
-                    return true;
-                } else {
-                    // dirbama su neuzrakinta atmintimi
-                    rcpu.decrTMRandCheck();
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.piProperty().setValue("5");
-                    stdout.setText("[INT] Bandymas naudotis bendrąją atmintimi jos neužrakinus [INT]");
-                    rcpu.mdProperty().setValue("0");
-                    throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
-                }
-                
-            case "SHR ":
-                ++pc;
-                vcpu.setPC(pc);
-                pcBlock = (pc / 16) + 2;
-                pcWord = pc % 16;
-                registers = memory[pcBlock][pcWord].get();
-                sharedWord = Integer.parseInt(registers.substring(3, 4), 16);
-                if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.siProperty().setValue("3");
-                    second = rcpu.smt().memoryProperty(sharedWord);
-                    first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
-                    first.setValue(second.get());
-                    rcpu.decrTMRandCheck();
-                    vcpu.setPC(pc+1);
-                    rcpu.siProperty().setValue("0");
-                    rcpu.mdProperty().setValue("0");
-                    return true;
-                } else {
-                    // dirbama su neuzrakinta atmintimi
-                    rcpu.decrTMRandCheck();
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.piProperty().setValue("5");
-                    stdout.setText("[INT] Bandymas naudotis bendrąją atmintimi jos neužrakinus [INT]");
-                    rcpu.mdProperty().setValue("0");
-                    throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
-                }
-                
-            case "HALT":
-                if (rcpu.mdProperty().get().equals("0")){
-                    rcpu.mdProperty().setValue("1");
-                    return true;
-                }
-                
-                System.out.println("\u001B[31mPasiekta programos pabaiga.\u001B[0m");
-                rcpu.decrTMRandCheck();
-                
-                rcpu.siProperty().setValue("7");
+                //rcpu.siProperty().setValue("0");
                 //rcpu.mdProperty().setValue("0");
-                //vcpu.setPC(pc+1);
-                return false;
+            }
+            if (position.startsWith("SHU")){
+                int id = Integer.parseInt(position.substring(3, 4), 16);
+                nextSHword = id;
+                String current = rcpu.shmProperty().get();
+                
+                if (rcpu.siProperty().get().equals("0")){
+                    nextSIval = "6";
+                    nonCommandStep = true;
+                    setModeTo1 = true;
+                    return true;
+                }
+                
+                if (!shmUnlocked){
+                    shmNeedsUnlocking = true;
+                    nonCommandStep = true;
+                    return true;
+                }
+                
+                finaliseSHU = true;
+                
+                /*if (current.charAt(id) == '0'){
+                    // jau atrakinta
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    return true;
+                } else {*/
+                
+                //rcpu.mdProperty().setValue("1");
+                //rcpu.siProperty().setValue("6");
+                //char[] arr = current.toCharArray();
+                //arr[id] = '0';
+                //String result = String.valueOf(arr);
+                //rcpu.shmProperty().setValue(result);
+                vcpu.setPC(pc+1);
+                rcpu.decrTMRandCheck();
+                nonCommandStep = true;
+                nextSIval = "0";
+                return true;
+
+            }
+        } catch(NumberFormatException ex){
+            nextPIval = "1";
+            nonCommandStep = true;
+            setModeTo1 = true;
+            return true;
         }
         
+        try {
+            switch(position){
+                case "ADD ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    String registers = memory[pcBlock][pcWord].get();
+                    StringProperty first = null, second = null;
+                    switch (registers.substring(0, 2)){ // rezultato registras
+                        case "AX":
+                            first = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            first = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys ADD registrai");
+                    }
+                    switch (registers.substring(2, 4)){ // antrasis operandas
+                        case "AX":
+                            second = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            second = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys ADD registrai");
+                    }
+                    int result = (int)Long.parseLong(first.get(), 16) + (int)Long.parseLong(second.get(), 16);
+                    boolean sign = false, zero = false, carry = false;
+                    if (result < (int)Long.parseLong(first.get(), 16) || result < (int)Long.parseLong(second.get(), 16)){
+                        carry = true;
+                        //rcpu.mdProperty().setValue("1");
+                        //rcpu.piProperty().setValue("4");
+                        //rcpu.mdProperty().setValue("0");
+                    }
+                    if (result == 0){
+                        zero = true;
+                    }
+                    if (result < 0){
+                        sign = true;
+                    }
+                    vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+
+                    if (carry){
+                        nonCommandStep = true;
+                        setModeTo1 = true;
+                        nextPIval = "4";
+                    }
+
+                    first.setValue(Integer.toHexString(result));
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    //rcpu.mdProperty().setValue("1");
+                    //rcpu.piProperty().setValue("0");
+                    //rcpu.mdProperty().setValue("0");
+                    return true;
+
+                case "SUB ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    first = null; second = null;
+                    switch (registers.substring(0, 2)){ // rezultato registras
+                        case "AX":
+                            first = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            first = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys SUB registrai");
+                    }
+                    switch (registers.substring(2, 4)){ // antrasis operandas
+                        case "AX":
+                            second = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            second = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys SUB registrai");
+                    }
+                    result = (int)Long.parseLong(first.get(), 16) - (int)Long.parseLong(second.get(), 16);
+                    sign = false; zero = false; carry = false;
+                    if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
+                        carry = true;
+                    }
+                    if (result == 0){
+                        zero = true;
+                    }
+                    if (result < 0){
+                        sign = true;
+                    }
+                    // perpildymo pertraukimas
+                    if (result > (int)Long.parseLong(first.get(), 16)){
+                        //rcpu.mdProperty().setValue("1");
+                        //rcpu.piProperty().setValue("4");
+                        //rcpu.mdProperty().setValue("0");
+                        nonCommandStep = true;
+                        setModeTo1 = true;
+                        nextPIval = "4";
+                    }
+                    vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                    first.setValue(Integer.toHexString(result));
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    // perpildymo pertraukimo atstatymas
+                    /*if (result > (int)Long.parseLong(first.get(), 16)){
+                        rcpu.mdProperty().setValue("1");
+                        rcpu.piProperty().setValue("0");
+                        rcpu.mdProperty().setValue("0");
+                    }*/
+                    return true;
+
+                case "CMP ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    first = null; second = null;
+                    switch (registers.substring(0, 2)){ // pirmasis operandas
+                        case "AX":
+                            first = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            first = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys CMP registrai");
+                    }
+                    switch (registers.substring(2, 4)){ // antrasis operandas
+                        case "AX":
+                            second = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            second = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys CMP registrai");
+                    }
+                    sign = false; zero = false; carry = false;
+                    if ((int)Long.parseLong(first.get(), 16) == (int)Long.parseLong(second.get(), 16)){
+                        zero = true;
+                    } else if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
+                        zero = false; carry = true;
+                    } else if ((int)Long.parseLong(first.get(), 16) > (int)Long.parseLong(second.get(), 16)){
+                        zero = false; carry = false;
+                    } else if ((int)Long.parseLong(first.get(), 16) <= (int)Long.parseLong(second.get(), 16)){
+                        zero = true; carry = true;
+                    } else if ((int)Long.parseLong(first.get(), 16) >= (int)Long.parseLong(second.get(), 16)){
+                        carry = false;
+                    }
+                    vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    return true;
+
+                case "MUL ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    first = null; second = null;
+                    switch (registers.substring(0, 2)){ // rezultato registras
+                        case "AX":
+                            first = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            first = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys MUL registrai");
+                    }
+                    switch (registers.substring(2, 4)){ // antrasis operandas
+                        case "AX":
+                            second = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            second = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys MUL registrai");
+                    }
+                    result = (int)Long.parseLong(first.get(), 16) * (int)Long.parseLong(second.get(), 16);
+                    sign = false; zero = false; carry = false;
+                    if (result < (int)Long.parseLong(first.get(), 16) || result < (int)Long.parseLong(second.get(), 16)){
+                        carry = true;
+                        //rcpu.mdProperty().setValue("1");
+                        //rcpu.piProperty().setValue("4");
+                        //rcpu.mdProperty().setValue("0");
+                    }
+                    if (result == 0){
+                        zero = true;
+                    }
+                    if (result < 0){
+                        sign = true;
+                    }
+                    vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+
+                    if (carry){
+                        nonCommandStep = true;
+                        setModeTo1 = true;
+                        nextPIval = "4";
+                    }
+
+                    first.setValue(Integer.toHexString(result));
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    //rcpu.mdProperty().setValue("1");
+                    //rcpu.piProperty().setValue("4");
+                    //rcpu.mdProperty().setValue("0");
+                    return true;
+
+                case "DIV ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    first = null; second = null;
+                    switch (registers.substring(0, 2)){ // rezultato registras
+                        case "AX":
+                            first = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            first = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys DIV registrai");
+                    }
+                    switch (registers.substring(2, 4)){ // antrasis operandas
+                        case "AX":
+                            second = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            second = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys DIV registrai");
+                    }
+                    if ((int)Long.parseLong(second.get(), 16) == 0){
+                        nextPIval = "3";
+                        nonCommandStep = true;
+                        setModeTo1 = true;
+                        return true;
+                        //throw new IOException("Neteisingas priskyrimas");
+                    }
+
+                    result = (int)Long.parseLong(first.get(), 16) / (int)Long.parseLong(second.get(), 16);
+                    sign = false; zero = false; carry = false;
+                    if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
+                        carry = true;
+                    }
+                    if (result == 0){
+                        zero = true;
+                    }
+                    if (result < 0){
+                        sign = true;
+                    }
+                    vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                    first.setValue(Integer.toHexString(result));
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    return true;
+
+                case "MOD ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    first = null; second = null;
+                    switch (registers.substring(0, 2)){ // rezultato registras
+                        case "AX":
+                            first = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            first = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys MOD registrai");
+                    }
+                    switch (registers.substring(2, 4)){ // antrasis operandas
+                        case "AX":
+                            second = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            second = vcpu.bxProperty();
+                            break;
+                        default:
+                            throw new IOException("Neegzistuojantys MOD registrai");
+                    }
+                    if ((int)Long.parseLong(second.get(), 16) == 0){
+                        nextPIval = "3";
+                        nonCommandStep = true;
+                        setModeTo1 = true;
+                        return true;
+                        //throw new IOException("Daliklis yra 0");
+                    }
+
+                    result = (int)Long.parseLong(first.get(), 16) % (int)Long.parseLong(second.get(), 16);
+                    sign = false; zero = false; carry = false;
+                    if ((int)Long.parseLong(first.get(), 16) < (int)Long.parseLong(second.get(), 16)){
+                        carry = true;
+                    }
+                    if (result == 0){
+                        zero = true;
+                    }
+                    if (result < 0){
+                        sign = true;
+                    }
+                    vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
+                    first.setValue(Integer.toHexString(result));
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    return true;
+
+                case "MOV ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    first = null; second = null;
+                    switch (registers.substring(0, 2)){ // rezultato registras/atmintis
+                        case "AX":
+                            first = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            first = vcpu.bxProperty();
+                            break;
+                        default:
+                            try {
+                                first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
+                            } catch(NumberFormatException ex){
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
+                                return true;
+                            }
+                    }
+                    switch (registers.substring(2, 4)){ // antrasis operandas
+                        case "AX":
+                            second = vcpu.axProperty();
+                            break;
+                        case "BX":
+                            second = vcpu.bxProperty();
+                            break;
+                        default:
+                            try {
+                                second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
+                            } catch(NumberFormatException ex){
+                                nextPIval = "1";
+                                nonCommandStep = true;
+                                setModeTo1 = true;
+                                return true;
+                            }
+                    }
+                    first.setValue(second.get());
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    return true;
+
+                case "MOVC":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    String fword = memory[pcBlock][pcWord].get();
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    String sword = memory[pcBlock][pcWord].get();
+                    String constant = fword + sword;
+                    try {
+                        vcpu.axProperty().setValue(Integer.toHexString((int)Long.parseLong(constant, 16)));
+                    } catch(NumberFormatException ex){
+                        nextPIval = "3";
+                        nonCommandStep = true;
+                        setModeTo1 = true;
+                        return true;
+                    }
+                    vcpu.setPC(pc+1);
+                    rcpu.decrTMRandCheck();
+                    return true;
+
+                case "JEQL":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    switch (registers.substring(1, 2)){ // + arba -
+                        case "+":
+                            int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
+                                if ((pc + offset + 1) > 255){
+                                    // pc 'islekia' is atminties reziu
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc + offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+
+                        case "-":
+                            offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
+                                if ((pc - offset + 1) < 0){
+                                    // pc 
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc - offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                        default:
+                            throw new IOException("Neteisingas poslinkio formatas");
+                    }
+
+                case "JAEQ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    switch (registers.substring(1, 2)){ // + arba -
+                        case "+":
+                            int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
+                                if ((pc + offset + 1) > 255){
+                                    // pc 'islekia' is atminties reziu
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc + offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+
+                        case "-":
+                            offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000000){
+                                if ((pc - offset + 1) < 0){
+                                    // pc
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc - offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                        default:
+                            throw new IOException("Neteisingas poslinkio formatas");
+                    }
+
+                case "JBEQ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    switch (registers.substring(1, 2)){ // + arba -
+                        case "+":
+                            int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
+                                (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
+                                (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
+                                if ((pc + offset + 1) > 255){
+                                    // pc 'islekia' is atminties reziu
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc + offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+
+                        case "-":
+                            offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00001001 || 
+                                (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001 ||
+                                (Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001000) == 0b00001000){
+                                if ((pc - offset + 1) < 0){
+                                    // pc
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc - offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                        default:
+                            throw new IOException("Neteisingas poslinkio formatas");
+                    }
+
+                case "JABV":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    switch (registers.substring(1, 2)){ // + arba -
+                        case "+":
+                            int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
+                                if ((pc + offset + 1) > 255){
+                                    // pc 'islekia' is atminties reziu
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc + offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+
+                        case "-":
+                            offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00001001) == 0b00000000){
+                                if ((pc - offset + 1) < 0){
+                                    // pc
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc - offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                        default:
+                            throw new IOException("Neteisingas poslinkio formatas");
+                    }
+
+                case "JBLW":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    switch (registers.substring(1, 2)){ // + arba -
+                        case "+":
+                            int offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
+                                if ((pc + offset + 1) > 255){
+                                    // pc 'islekia' is atminties reziu
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc + offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+
+                        case "-":
+                            offset = Integer.parseInt(registers.substring(2, 4), 16);
+                            if ((Integer.parseInt(vcpu.sfProperty().get(), 16) & 0b00000001) == 0b00000001){
+                                if ((pc - offset + 1) < 0){
+                                    // pc
+                                    nextPIval = "1";
+                                    nonCommandStep = true;
+                                    setModeTo1 = true;
+                                    rcpu.decrTMRandCheck();
+                                    return true;
+                                }
+                                vcpu.setPC(pc - offset + 1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                            else {
+                                vcpu.setPC(pc+1);
+                                rcpu.decrTMRandCheck();
+                                return true;
+                            }
+                        default:
+                            throw new IOException("Neteisingas poslinkio formatas");
+                    }
+
+                case "SHW ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    int sharedWord = Integer.parseInt(registers.substring(1, 2), 16);
+                    if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
+                        rcpu.mdProperty().setValue("1");
+                        rcpu.siProperty().setValue("4");
+                        first = rcpu.smt().memoryProperty(sharedWord);
+                        second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
+                        first.setValue(second.get());
+                        rcpu.decrTMRandCheck();
+                        vcpu.setPC(pc+1);
+                        rcpu.siProperty().setValue("0");
+                        rcpu.mdProperty().setValue("0");
+                        return true;
+                    } else {
+                        // dirbama su neuzrakinta atmintimi
+                        rcpu.decrTMRandCheck();
+                        rcpu.mdProperty().setValue("1");
+                        rcpu.piProperty().setValue("5");
+                        stdout.setText("[INT] Bandymas naudotis bendrąją atmintimi jos neužrakinus [INT]");
+                        rcpu.mdProperty().setValue("0");
+                        throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
+                    }
+
+                case "SHR ":
+                    ++pc;
+                    vcpu.setPC(pc);
+                    pcBlock = (pc / 16) + 2;
+                    pcWord = pc % 16;
+                    registers = memory[pcBlock][pcWord].get();
+                    sharedWord = Integer.parseInt(registers.substring(3, 4), 16);
+                    if (rcpu.shmProperty().get().charAt(sharedWord) == '1'){
+                        rcpu.mdProperty().setValue("1");
+                        rcpu.siProperty().setValue("3");
+                        second = rcpu.smt().memoryProperty(sharedWord);
+                        first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
+                        first.setValue(second.get());
+                        rcpu.decrTMRandCheck();
+                        vcpu.setPC(pc+1);
+                        rcpu.siProperty().setValue("0");
+                        rcpu.mdProperty().setValue("0");
+                        return true;
+                    } else {
+                        // dirbama su neuzrakinta atmintimi
+                        rcpu.decrTMRandCheck();
+                        rcpu.mdProperty().setValue("1");
+                        rcpu.piProperty().setValue("5");
+                        stdout.setText("[INT] Bandymas naudotis bendrąją atmintimi jos neužrakinus [INT]");
+                        rcpu.mdProperty().setValue("0");
+                        throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
+                    }
+
+                case "HALT":
+                    if (rcpu.mdProperty().get().equals("0")){
+                        rcpu.mdProperty().setValue("1");
+                        return true;
+                    }
+
+                    System.out.println("\u001B[31mPasiekta programos pabaiga.\u001B[0m");
+                    rcpu.decrTMRandCheck();
+
+                    rcpu.siProperty().setValue("7");
+                    //rcpu.mdProperty().setValue("0");
+                    //vcpu.setPC(pc+1);
+                    return false;
+            }
+        } catch(NumberFormatException ex){
+            nextPIval = "1";
+            nonCommandStep = true;
+            setModeTo1 = true;
+            return true;
+        }
         // neegzistuojanti komanda
-        rcpu.mdProperty().setValue("1");
-        rcpu.piProperty().setValue("2");
-        stdout.setText("[INT] Neteisingas op. kodas [INT]");
-        rcpu.mdProperty().setValue("0");
-        throw new IOException("[INT] Neteisingas op. kodas [INT]");
+        /*if (rcpu.mdProperty().get().equals("0")){
+            rcpu.mdProperty().setValue("1");
+            return true;
+        }*/
+        //rcpu.mdProperty().setValue("1");
+        //rcpu.piProperty().setValue("2");
+        //stdout.setText("[INT] Neteisingas op. kodas [INT]");
+        nextPIval = "2";
+        nonCommandStep = true;
+        setModeTo1 = true;
+        return true;
+        //rcpu.mdProperty().setValue("0");
+        //throw new IOException("[INT] Neteisingas op. kodas [INT]");
     }
     
     private String arrangeFlags(boolean sign, boolean zero, boolean carry){

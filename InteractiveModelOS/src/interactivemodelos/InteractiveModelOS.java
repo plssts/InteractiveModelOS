@@ -119,10 +119,10 @@ public class InteractiveModelOS extends Application {
                         //
                     }
                 } catch (NumberFormatException | IOException ex) {
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.piProperty().setValue("1");
-                    stdout.setText("[INT] Neteisingas adresas [INT]");
-                    rcpu.mdProperty().setValue("0");
+                    //rcpu.mdProperty().setValue("1");
+                    //rcpu.piProperty().setValue("1");
+                    stdout.setText(ex.getMessage());
+                    //rcpu.mdProperty().setValue("0");
                     System.out.println(ex);
                     //blogas formatavimas
                 }
@@ -136,10 +136,10 @@ public class InteractiveModelOS extends Application {
                 try {
                     vm.executeCommand(vcpu, rcpu, stdinStatus, stdout);
                 } catch (NumberFormatException | IOException ex) {
-                    rcpu.mdProperty().setValue("1");
-                    rcpu.piProperty().setValue("1");
-                    stdout.setText("[INT] Neteisingas adresas [INT]");
-                    rcpu.mdProperty().setValue("0");
+                    //rcpu.mdProperty().setValue("1");
+                    //rcpu.piProperty().setValue("1");
+                    stdout.setText(ex.getMessage());
+                    //rcpu.mdProperty().setValue("0");
                     System.out.println(ex);
                     //blogas formatavimas
                 }
