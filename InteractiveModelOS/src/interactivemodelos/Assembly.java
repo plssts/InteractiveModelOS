@@ -14,6 +14,8 @@ import java.util.ArrayList;
  */
 public class Assembly {
     private boolean parseCodeGracefully = false;
+    private int codeStart = 0;
+    private int dataWords = 0;
     
     public ArrayList parseFile(File file) throws FileNotFoundException, IOException{
         ArrayList<String> commands = new ArrayList<>();
@@ -27,7 +29,7 @@ public class Assembly {
                 parseData(br, commands);
             }
             
-            if (line.equals("CODE")){
+            if (line.startsWith("CODE")){
                 if (!parseData){
                     throw new IOException("DATA irasoma pries CODE.");
                 }
@@ -41,11 +43,19 @@ public class Assembly {
     
     private void parseData(BufferedReader br, ArrayList commands) throws IOException{
         String line;
-        int dataWords = 0;
         
         while ((line = br.readLine()) != null){
-            if (line.equals("CODE")){
-                commands.add("[STC]"); // switch-to-code prasymas kraunant i atminti
+            if (line.startsWith("CODE")){
+                try {
+                    codeStart = Integer.parseInt(line.split(" ")[1], 16);
+                    if (codeStart > 255){
+                        throw new NumberFormatException();
+                    }
+                } catch(ArrayIndexOutOfBoundsException | NumberFormatException ex){
+                    throw new IOException("Blogas CODE PC formatavimas");
+                }
+                
+                commands.add("[STC] " + Integer.toHexString(codeStart)); // switch-to-code prasymas kraunant i atminti
                 parseCodeGracefully = true; // pazymime, kad mes radome CODE segmenta, o ne siaip pateikiame faila i parseCode()
                 return; // Eisime i CODE segmento parsinima
             }
@@ -100,7 +110,7 @@ public class Assembly {
         while ((line = br.readLine()) != null){
             for (int i = 0; i < line.length(); i += 4){
                 ++codeWords;
-                if (codeWords > 224){
+                if (codeWords > (255 - dataWords)){
                     throw new IOException("Programoje per daug instrukciju");
                 }
                 String word = line.substring(i, i+4);

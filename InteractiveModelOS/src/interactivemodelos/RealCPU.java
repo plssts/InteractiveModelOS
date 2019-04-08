@@ -51,12 +51,18 @@ public class RealCPU {
         PC.setValue(sigByte + Integer.toHexString(value));
     }
     
-    public void decrTMRandCheck(){
+    public void decrTMRandCheck(int decr){
+        int remainder = 0;
+        if (decr > Integer.parseInt(TMR.get(), 16)){
+            remainder = decr - Integer.parseInt(TMR.get(), 16);
+            TMR.setValue("0");
+        }
+        
         if (Integer.parseInt(TMR.get(), 16) > 0){
-            TMR.setValue(Integer.toHexString(Integer.parseInt(TMR.getValue(), 16) - 1));
+            TMR.setValue(Integer.toHexString(Integer.parseInt(TMR.getValue(), 16) - decr));
         } else {
             // perduodamas valdymas kitai VM; siame projekte nerealizuojama.
-            TMR.setValue("a");
+            TMR.setValue(Integer.toHexString(10 - remainder));
         }
     }
     

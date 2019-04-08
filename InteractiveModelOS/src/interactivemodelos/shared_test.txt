@@ -1,6 +1,6 @@
 DATA
 32 w "Out wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww", 0
-CODE
+CODE 20
 SHL0
 SHW M000
 SHL5

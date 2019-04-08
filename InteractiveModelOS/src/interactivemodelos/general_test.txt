@@ -4,7 +4,7 @@ DATA
 2 w "Lyginis", 0
 3 w "Nelyginis", 0
 1 w 7FFFFFFF
-CODE
+CODE 10
 WW00
 WW01
 WW02

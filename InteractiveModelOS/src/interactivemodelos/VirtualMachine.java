@@ -18,6 +18,8 @@ import javafx.scene.paint.Color;
 public class VirtualMachine {
     private Assembly ass;
     private final SimpleStringProperty[][] memory = new SimpleStringProperty[16][16];
+    private int startPC = 0;
+    
     private boolean nonCommandStep = false;
     private boolean setModeTo0 = false;
     private boolean setModeTo1 = false;
@@ -63,7 +65,11 @@ public class VirtualMachine {
         ass = new Assembly();
     }
     
-    public void loadProgram(File file){
+    public int getInitialPC(){
+        return startPC;
+    }
+    
+    public void loadProgram(File file, VirtualCPU vcpu){
         ArrayList<String> commands = null;
         
         try {
@@ -80,9 +86,14 @@ public class VirtualMachine {
         int block = 0, wrd = 0;
         for (String word : commands){
             System.out.println(word);
-            if (word.equals("[STC]")){
-                block = 2; // pereinama i code blokus lastelese nuo 20...
-                wrd = 0;
+            if (word.startsWith("[STC]")){
+                int codeStart = Integer.parseInt(word.split(" ")[1], 16);
+                startPC = codeStart;
+                block = codeStart / 16;
+                wrd = codeStart % 16;
+                System.out.println(Integer.toHexString(block) + Integer.toHexString(wrd));
+                vcpu.pcProperty().setValue(Integer.toHexString(block) + Integer.toHexString(wrd));
+                System.out.println("vcpu PC yra: " + vcpu.pcProperty().get());
                 continue;
             }
             
@@ -293,7 +304,7 @@ public class VirtualMachine {
         }
         
         int pc = Integer.parseInt(vcpu.pcProperty().getValue(), 16);
-        int pcBlock = (pc / 16) + 2; // pradedama nuo 20 CODE segmento
+        int pcBlock = (pc / 16) /*+ 2*/; // pradedama nuo 20 CODE segmento
         int pcWord = pc % 16;
         String position = memory[pcBlock][pcWord].getValue();
         
@@ -311,11 +322,11 @@ public class VirtualMachine {
                     nextPIval = "1";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     return true;
                 }
                 vcpu.setPC(pc + offset + 1);
-                rcpu.decrTMRandCheck();
+                rcpu.decrTMRandCheck(1);
                 return true;
             }
             if (position.startsWith("J-")){
@@ -325,11 +336,11 @@ public class VirtualMachine {
                     nextPIval = "1";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     return true;
                 }
                 vcpu.setPC(pc - offset + 1);
-                rcpu.decrTMRandCheck();
+                rcpu.decrTMRandCheck(1);
                 return true;
             }
 
@@ -375,7 +386,7 @@ public class VirtualMachine {
                 //temp = rcpu.chProperty().get().toCharArray();
                 //temp[1] = '0';
                 //rcpu.chProperty().setValue(String.valueOf(temp));
-                rcpu.decrTMRandCheck();
+                rcpu.decrTMRandCheck(3);
                 //rcpu.siProperty().setValue("0");
                 //rcpu.mdProperty().setValue("0");
                 
@@ -445,7 +456,7 @@ public class VirtualMachine {
                 
                 vcpu.setPC(pc+1);
                 contentProcessed = false;
-                rcpu.decrTMRandCheck();
+                rcpu.decrTMRandCheck(3);
                 //rcpu.siProperty().setValue("0");
                 //rcpu.mdProperty().setValue("0");
                 return true;
@@ -482,7 +493,7 @@ public class VirtualMachine {
                 //rcpu.shmProperty().setValue(result);
                 
                 vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
+                rcpu.decrTMRandCheck(3);
                 nonCommandStep = true;
                 nextSIval = "0";
                 return true;
@@ -523,7 +534,7 @@ public class VirtualMachine {
                 //String result = String.valueOf(arr);
                 //rcpu.shmProperty().setValue(result);
                 vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck();
+                rcpu.decrTMRandCheck(3);
                 nonCommandStep = true;
                 nextSIval = "0";
                 return true;
@@ -541,7 +552,7 @@ public class VirtualMachine {
                 case "ADD ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     String registers = memory[pcBlock][pcWord].get();
                     StringProperty first = null, second = null;
@@ -589,7 +600,7 @@ public class VirtualMachine {
 
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     //rcpu.mdProperty().setValue("1");
                     //rcpu.piProperty().setValue("0");
                     //rcpu.mdProperty().setValue("0");
@@ -598,7 +609,7 @@ public class VirtualMachine {
                 case "SUB ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     first = null; second = null;
@@ -645,7 +656,7 @@ public class VirtualMachine {
                     vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     // perpildymo pertraukimo atstatymas
                     /*if (result > (int)Long.parseLong(first.get(), 16)){
                         rcpu.mdProperty().setValue("1");
@@ -657,7 +668,7 @@ public class VirtualMachine {
                 case "CMP ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     first = null; second = null;
@@ -695,13 +706,13 @@ public class VirtualMachine {
                     }
                     vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "MUL ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     first = null; second = null;
@@ -749,7 +760,7 @@ public class VirtualMachine {
 
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     //rcpu.mdProperty().setValue("1");
                     //rcpu.piProperty().setValue("4");
                     //rcpu.mdProperty().setValue("0");
@@ -758,7 +769,7 @@ public class VirtualMachine {
                 case "DIV ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     first = null; second = null;
@@ -804,13 +815,13 @@ public class VirtualMachine {
                     vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "MOD ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     first = null; second = null;
@@ -856,13 +867,13 @@ public class VirtualMachine {
                     vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "MOV ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     first = null; second = null;
@@ -902,18 +913,18 @@ public class VirtualMachine {
                     }
                     first.setValue(second.get());
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "MOVC":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     String fword = memory[pcBlock][pcWord].get();
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     String sword = memory[pcBlock][pcWord].get();
                     String constant = fword + sword;
@@ -926,13 +937,13 @@ public class VirtualMachine {
                         return true;
                     }
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "JEQL":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     switch (registers.substring(1, 2)){ // + arba -
@@ -944,16 +955,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -965,16 +976,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -984,7 +995,7 @@ public class VirtualMachine {
                 case "JAEQ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     switch (registers.substring(1, 2)){ // + arba -
@@ -996,16 +1007,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -1017,16 +1028,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1036,7 +1047,7 @@ public class VirtualMachine {
                 case "JBEQ":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     switch (registers.substring(1, 2)){ // + arba -
@@ -1050,16 +1061,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -1073,16 +1084,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1092,7 +1103,7 @@ public class VirtualMachine {
                 case "JABV":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     switch (registers.substring(1, 2)){ // + arba -
@@ -1104,16 +1115,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -1125,16 +1136,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1144,7 +1155,7 @@ public class VirtualMachine {
                 case "JBLW":
                     ++pc;
                     vcpu.setPC(pc);
-                    pcBlock = (pc / 16) + 2;
+                    pcBlock = (pc / 16) /*+ 2*/;
                     pcWord = pc % 16;
                     registers = memory[pcBlock][pcWord].get();
                     switch (registers.substring(1, 2)){ // + arba -
@@ -1156,16 +1167,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -1177,16 +1188,16 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck();
+                                    rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck();
+                                rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1206,7 +1217,7 @@ public class VirtualMachine {
                         contentProcessed = true;
                         ++pc;
                         //vcpu.setPC(pc);
-                        pcBlock = (pc / 16) + 2;
+                        pcBlock = (pc / 16) /*+ 2*/;
                         pcWord = pc % 16;
                         registers = memory[pcBlock][pcWord].get();
                         int sharedWord = Integer.parseInt(registers.substring(1, 2), 16);
@@ -1222,7 +1233,7 @@ public class VirtualMachine {
                             return true;
                         } else {
                             // dirbama su neuzrakinta atmintimi
-                            rcpu.decrTMRandCheck();
+                            rcpu.decrTMRandCheck(3);
                             nextPIval = "5";
                             nonCommandStep = true;
                             //setModeTo1 = true;
@@ -1234,7 +1245,7 @@ public class VirtualMachine {
                             //throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
                         }
                     }
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(3);
                     vcpu.setPC(pc+2);
                     contentProcessed = false;
                     nonCommandStep = true;
@@ -1256,7 +1267,7 @@ public class VirtualMachine {
                         contentProcessed = true;
                         ++pc;
                         //vcpu.setPC(pc);
-                        pcBlock = (pc / 16) + 2;
+                        pcBlock = (pc / 16) /*+ 2*/;
                         pcWord = pc % 16;
                         registers = memory[pcBlock][pcWord].get();
                         int sharedWord = Integer.parseInt(registers.substring(3, 4), 16);
@@ -1271,7 +1282,7 @@ public class VirtualMachine {
                             return true;
                         } else {
                             // dirbama su neuzrakinta atmintimi
-                            rcpu.decrTMRandCheck();
+                            rcpu.decrTMRandCheck(3);
                             nextPIval = "5";
                             nonCommandStep = true;
                             //setModeTo1 = true;
@@ -1283,7 +1294,7 @@ public class VirtualMachine {
                             //throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
                         }
                     }
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(3);
                     vcpu.setPC(pc+2);
                     contentProcessed = false;
                     nonCommandStep = true;
@@ -1299,7 +1310,7 @@ public class VirtualMachine {
                     }
 
                     System.out.println("\u001B[31mPasiekta programos pabaiga.\u001B[0m");
-                    rcpu.decrTMRandCheck();
+                    rcpu.decrTMRandCheck(3);
 
                     rcpu.siProperty().setValue("7");
                     //rcpu.mdProperty().setValue("0");

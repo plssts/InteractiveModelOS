@@ -150,7 +150,7 @@ public class InteractiveModelOS extends Application {
         reset.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                vcpu.setPC(0);
+                vcpu.pcProperty().setValue(Integer.toHexString(vm.getInitialPC()/16) + Integer.toHexString(vm.getInitialPC()%16));
                 vcpu.setSF(0);
                 vcpu.axProperty().setValue("0");
                 vcpu.bxProperty().setValue("0");
@@ -160,6 +160,7 @@ public class InteractiveModelOS extends Application {
                 rcpu.piProperty().setValue("0");
                 rcpu.shmProperty().setValue("0000000000000000");
                 stdout.setText("");
+                vm.reset();
             }
         });
         
@@ -167,6 +168,7 @@ public class InteractiveModelOS extends Application {
         loadProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
+                vm.reset();
                 for (int i = 0; i < 16; ++i){
                     for (int j = 0; j < 16 ; ++j){
                         vm.setWord(i, j, "0");
@@ -188,8 +190,8 @@ public class InteractiveModelOS extends Application {
                 if (sourceCode == null){
                     return;
                 }
-                vm.loadProgram(sourceCode);
-                vcpu.setPC(0);
+                vm.loadProgram(sourceCode, vcpu);
+                //vcpu.setPC(0);
                 vcpu.setSF(0);
                 vcpu.axProperty().setValue("0");
                 vcpu.bxProperty().setValue("0");

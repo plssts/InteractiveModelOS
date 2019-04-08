@@ -3,7 +3,7 @@ DATA
 1 w B
 1 w 9
 8 w "Tikrinimas pabaigtas sekmingai", 0
-CODE
+CODE 0c
 MOVC0000000A
 MOV BX00
 CMP AXBX
