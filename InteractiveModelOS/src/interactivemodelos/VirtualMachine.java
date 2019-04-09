@@ -54,6 +54,9 @@ public class VirtualMachine {
     private boolean finaliseSHR = false;
     private boolean finaliseSHW = false;
     
+    private boolean TMRstep = false;
+    private int nextTMRdecr = 0;
+    
     public VirtualMachine(){ 
         // Pirminis atminties uzkrovimas po 4 baitus
         for (int i = 0; i < 16; ++i){
@@ -130,7 +133,8 @@ public class VirtualMachine {
         shwNeedsStart = false;
         finaliseSHR = false;
         finaliseSHW = false;
-        //contentProcessed = false;
+        TMRstep = false;
+        nextTMRdecr = 0;
     }
     
     public void reset(){
@@ -139,6 +143,12 @@ public class VirtualMachine {
     }
     
     public boolean executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
+        if (TMRstep){
+            rcpu.decrTMRandCheck(nextTMRdecr);
+            nextTMRdecr = 0;
+            TMRstep = false;
+            return true;
+        }
         if (nonCommandStep){
             //System.out.println("NON-CMD");
             if (setModeTo0){
@@ -322,11 +332,16 @@ public class VirtualMachine {
                     nextPIval = "1";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    rcpu.decrTMRandCheck(1);
+                    
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     return true;
                 }
                 vcpu.setPC(pc + offset + 1);
-                rcpu.decrTMRandCheck(1);
+                nextTMRdecr = 1;
+                TMRstep = true;
+                //rcpu.decrTMRandCheck(1);
                 return true;
             }
             if (position.startsWith("J-")){
@@ -336,11 +351,16 @@ public class VirtualMachine {
                     nextPIval = "1";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    rcpu.decrTMRandCheck(1);
+                    
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     return true;
                 }
                 vcpu.setPC(pc - offset + 1);
-                rcpu.decrTMRandCheck(1);
+                nextTMRdecr = 1;
+                TMRstep = true;
+                //rcpu.decrTMRandCheck(1);
                 return true;
             }
 
@@ -386,7 +406,9 @@ public class VirtualMachine {
                 //temp = rcpu.chProperty().get().toCharArray();
                 //temp[1] = '0';
                 //rcpu.chProperty().setValue(String.valueOf(temp));
-                rcpu.decrTMRandCheck(3);
+                //rcpu.decrTMRandCheck(3);
+                nextTMRdecr = 3;
+                TMRstep = true;
                 //rcpu.siProperty().setValue("0");
                 //rcpu.mdProperty().setValue("0");
                 
@@ -456,7 +478,9 @@ public class VirtualMachine {
                 
                 vcpu.setPC(pc+1);
                 contentProcessed = false;
-                rcpu.decrTMRandCheck(3);
+                //rcpu.decrTMRandCheck(3);
+                nextTMRdecr = 3;
+                TMRstep = true;
                 //rcpu.siProperty().setValue("0");
                 //rcpu.mdProperty().setValue("0");
                 return true;
@@ -493,7 +517,9 @@ public class VirtualMachine {
                 //rcpu.shmProperty().setValue(result);
                 
                 vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck(3);
+                //rcpu.decrTMRandCheck(3);
+                nextTMRdecr = 3;
+                TMRstep = true;
                 nonCommandStep = true;
                 nextSIval = "0";
                 return true;
@@ -534,7 +560,9 @@ public class VirtualMachine {
                 //String result = String.valueOf(arr);
                 //rcpu.shmProperty().setValue(result);
                 vcpu.setPC(pc+1);
-                rcpu.decrTMRandCheck(3);
+                //rcpu.decrTMRandCheck(3);
+                nextTMRdecr = 3;
+                TMRstep = true;
                 nonCommandStep = true;
                 nextSIval = "0";
                 return true;
@@ -600,7 +628,9 @@ public class VirtualMachine {
 
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck(1);
+                    //rcpu.decrTMRandCheck(1);
+                    nextTMRdecr = 1;
+                    TMRstep = true;
                     //rcpu.mdProperty().setValue("1");
                     //rcpu.piProperty().setValue("0");
                     //rcpu.mdProperty().setValue("0");
@@ -656,7 +686,9 @@ public class VirtualMachine {
                     vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck(1);
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     // perpildymo pertraukimo atstatymas
                     /*if (result > (int)Long.parseLong(first.get(), 16)){
                         rcpu.mdProperty().setValue("1");
@@ -706,7 +738,9 @@ public class VirtualMachine {
                     }
                     vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck(1);
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "MUL ":
@@ -760,7 +794,9 @@ public class VirtualMachine {
 
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck(1);
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     //rcpu.mdProperty().setValue("1");
                     //rcpu.piProperty().setValue("4");
                     //rcpu.mdProperty().setValue("0");
@@ -815,7 +851,9 @@ public class VirtualMachine {
                     vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck(1);
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "MOD ":
@@ -867,7 +905,9 @@ public class VirtualMachine {
                     vcpu.sfProperty().setValue(arrangeFlags(sign, zero, carry));
                     first.setValue(Integer.toHexString(result));
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck(1);
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "MOV ":
@@ -913,7 +953,9 @@ public class VirtualMachine {
                     }
                     first.setValue(second.get());
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck(1);
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "MOVC":
@@ -937,7 +979,9 @@ public class VirtualMachine {
                         return true;
                     }
                     vcpu.setPC(pc+1);
-                    rcpu.decrTMRandCheck(1);
+                    nextTMRdecr = 1;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(1);
                     return true;
 
                 case "JEQL":
@@ -955,16 +999,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -976,16 +1026,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1007,16 +1063,23 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -1028,16 +1091,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1061,16 +1130,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -1084,16 +1159,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1115,16 +1196,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -1136,16 +1223,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1167,16 +1260,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc + offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
 
@@ -1188,16 +1287,22 @@ public class VirtualMachine {
                                     nextPIval = "1";
                                     nonCommandStep = true;
                                     setModeTo1 = true;
-                                    rcpu.decrTMRandCheck(1);
+                                    nextTMRdecr = 1;
+                                    TMRstep = true;
+                                    //rcpu.decrTMRandCheck(1);
                                     return true;
                                 }
                                 vcpu.setPC(pc - offset + 1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true;
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                             else {
                                 vcpu.setPC(pc+1);
-                                rcpu.decrTMRandCheck(1);
+                                nextTMRdecr = 1;
+                                TMRstep = true; 
+                                //rcpu.decrTMRandCheck(1);
                                 return true;
                             }
                         default:
@@ -1233,7 +1338,9 @@ public class VirtualMachine {
                             return true;
                         } else {
                             // dirbama su neuzrakinta atmintimi
-                            rcpu.decrTMRandCheck(3);
+                            nextTMRdecr = 3;
+                            TMRstep = true;
+                            //rcpu.decrTMRandCheck(3);
                             nextPIval = "5";
                             nonCommandStep = true;
                             //setModeTo1 = true;
@@ -1245,7 +1352,9 @@ public class VirtualMachine {
                             //throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
                         }
                     }
-                    rcpu.decrTMRandCheck(3);
+                    nextTMRdecr = 3;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(3);
                     vcpu.setPC(pc+2);
                     contentProcessed = false;
                     nonCommandStep = true;
@@ -1282,7 +1391,9 @@ public class VirtualMachine {
                             return true;
                         } else {
                             // dirbama su neuzrakinta atmintimi
-                            rcpu.decrTMRandCheck(3);
+                            //rcpu.decrTMRandCheck(3);
+                            nextTMRdecr = 3;
+                            TMRstep = true;
                             nextPIval = "5";
                             nonCommandStep = true;
                             //setModeTo1 = true;
@@ -1294,7 +1405,9 @@ public class VirtualMachine {
                             //throw new IOException("Bandymas naudotis bendrąją atmintimi jos neužrakinus");
                         }
                     }
-                    rcpu.decrTMRandCheck(3);
+                    nextTMRdecr = 3;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(3);
                     vcpu.setPC(pc+2);
                     contentProcessed = false;
                     nonCommandStep = true;
@@ -1310,7 +1423,9 @@ public class VirtualMachine {
                     }
 
                     System.out.println("\u001B[31mPasiekta programos pabaiga.\u001B[0m");
-                    rcpu.decrTMRandCheck(3);
+                    nextTMRdecr = 3;
+                    TMRstep = true;
+                    //rcpu.decrTMRandCheck(3);
 
                     rcpu.siProperty().setValue("7");
                     //rcpu.mdProperty().setValue("0");
