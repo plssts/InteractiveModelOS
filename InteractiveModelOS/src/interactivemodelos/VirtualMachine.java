@@ -302,13 +302,15 @@ public class VirtualMachine {
             if (finaliseSHR){
                 finaliseSHR = false;
                 //System.out.println("YUP");
-                setModeTo0 = true;
+                //setModeTo0 = true;
+                clearBooleans();
                 return true;
             }
             if (finaliseSHW){
                 finaliseSHW = false;
                 //System.out.println("YUP");
-                setModeTo0 = true;
+                //setModeTo0 = true;
+                clearBooleans();
                 return true;
             }
         }
@@ -1310,13 +1312,13 @@ public class VirtualMachine {
                     }
 
                 case "SHW ":
-                    if (rcpu.siProperty().get().equals("0") && !contentProcessed){
+                    /*if (rcpu.siProperty().get().equals("0") && !contentProcessed){
                         nextSIval = "4";
                         nonCommandStep = true;
-                        setModeTo1 = true;
+                        //setModeTo1 = true;
                         shwNeedsStart = true;
                         return true;
-                    }
+                    }*/
                     
                     if (!contentProcessed){
                         contentProcessed = true;
@@ -1357,20 +1359,21 @@ public class VirtualMachine {
                     //rcpu.decrTMRandCheck(3);
                     vcpu.setPC(pc+2);
                     contentProcessed = false;
-                    nonCommandStep = true;
-                    nextSIval = "0";
-                    finaliseSHW = true;
+                    clearBooleans();
+                    //nonCommandStep = true;
+                    //nextSIval = "0";
+                    //finaliseSHW = true;
                     //System.out.println("SHW should set MD to 0");
                     return true;
 
                 case "SHR ":
-                    if (rcpu.siProperty().get().equals("0") && !contentProcessed){
+                    /*if (rcpu.siProperty().get().equals("0") && !contentProcessed){
                         nextSIval = "3";
                         nonCommandStep = true;
-                        setModeTo1 = true;
+                        //setModeTo1 = true;
                         shrNeedsStart = true;
                         return true;
-                    }
+                    }*/
                     
                     if (!contentProcessed){
                         contentProcessed = true;
@@ -1410,9 +1413,10 @@ public class VirtualMachine {
                     //rcpu.decrTMRandCheck(3);
                     vcpu.setPC(pc+2);
                     contentProcessed = false;
-                    nonCommandStep = true;
-                    nextSIval = "0";
-                    finaliseSHR = true;
+                    clearBooleans();
+                    //nonCommandStep = true;
+                    //nextSIval = "0";
+                    //finaliseSHR = true;
                     //System.out.println("SHR should set MD to 0");
                     return true;
 

@@ -54,7 +54,7 @@ public class RealCPU {
     public void decrTMRandCheck(int decr){
         int remainder = 0;
         if (decr > Integer.parseInt(TMR.get(), 16)){
-            remainder = decr - Integer.parseInt(TMR.get(), 16);
+            //remainder = decr - Integer.parseInt(TMR.get(), 16);
             TMR.setValue("0");
         }
         
@@ -62,7 +62,7 @@ public class RealCPU {
             TMR.setValue(Integer.toHexString(Integer.parseInt(TMR.getValue(), 16) - decr));
         } else {
             // perduodamas valdymas kitai VM; siame projekte nerealizuojama.
-            TMR.setValue(Integer.toHexString(10 - remainder));
+            TMR.setValue("a"/*Integer.toHexString(10 - remainder)*/);
         }
     }
     
