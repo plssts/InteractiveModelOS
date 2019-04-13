@@ -1,4 +1,5 @@
 /*
+Parses through source files and assembles instruction sets into commands.
  */
 package interactivemodelos;
 
@@ -10,8 +11,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
+ * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
  */
+
 public class Assembly {
     private boolean parseCodeGracefully = false;
     private int codeStart = 0;
@@ -31,13 +33,11 @@ public class Assembly {
             
             if (line.startsWith("CODE")){
                 if (!parseData){
-                    throw new IOException("DATA irasoma pries CODE.");
+                    throw new IOException("DATA goes before CODE.");
                 }
             }
-            
             parseCode(br, commands);
         }
-        
         return commands;
     }
     
@@ -52,57 +52,58 @@ public class Assembly {
                         throw new NumberFormatException();
                     }
                 } catch(ArrayIndexOutOfBoundsException | NumberFormatException ex){
-                    throw new IOException("Blogas CODE PC formatavimas");
+                    throw new IOException("Bad CODE PC formatting.");
                 }
                 
-                commands.add("[STC] " + Integer.toHexString(codeStart)); // switch-to-code prasymas kraunant i atminti
-                parseCodeGracefully = true; // pazymime, kad mes radome CODE segmenta, o ne siaip pateikiame faila i parseCode()
-                return; // Eisime i CODE segmento parsinima
+                commands.add("[STC] " + Integer.toHexString(codeStart)); 
+                // switch-to-code request before loading into virtual memory
+                
+                parseCodeGracefully = true; // correct parsing was detected
+                return;
             }
             
             String[] all = line.split(", 0");
             int wordCount = Integer.parseInt(line.split("w")[0].trim());
             dataWords += wordCount;
             if (dataWords > 256){
-                throw new IOException("DATA atminties dydis virsija 16 bloku");
+                throw new IOException("DATA memory size above 16 blocks.");
             }
             
-            // Jeigu cia yra argumentas-stringas
+            // String variable
             if (all[0].contains("\"")){
                 String word = all[0].split("\"")[1];
                 for (int i = 0; i < wordCount; ++i){
                     if (i == wordCount - 1){
                         commands.add(word.substring(0, word.length()));
                         if (word.substring(0, word.length()).length() > 4){
-                            // Zodziu prasyta maziau, negu uzima argumentas-stringas
-                            throw new IOException("Neteisingas zodziu kiekis " + wordCount + " duomenu eilutei " + word);
+                            // less words than needed for this variable
+                            throw new IOException("Incorrect word count " + wordCount + " for " + word);
                         }
                         break;
                     }
                     try {
                         commands.add(word.substring(0, 4));
                     } catch(StringIndexOutOfBoundsException ex){
-                        // Zodziu prasyta daugiau, negu uzima argumentas-stringas
-                        throw new IOException("Neteisingas zodziu kiekis " + wordCount + " duomenu eilutei " + word);
+                        // more words than needed for this variable
+                        throw new IOException("Incorrect word count " + wordCount + " for " + word);
                     }
                     word = word.substring(4);
                 }
             }
-            else { // Cia argumentas - skaicius signed int is 8 simboliu
+            else { // Constant variable
                 if (wordCount > 1){
-                    throw new IOException("Naudoti 1 w konstantoms");
+                    throw new IOException("Use 1 w for constants.");
                 }
                 
                 commands.add(line.split("w")[1].trim());
             }
-            
         }
     }
     
     private void parseCode(BufferedReader br, ArrayList commands) throws IOException{
         int codeWords = 0;
         if (!parseCodeGracefully){
-            throw new IOException("Neteisingas programos formatavimas");
+            throw new IOException("Bad programme formatting.");
         }
         
         String line;
@@ -111,7 +112,7 @@ public class Assembly {
             for (int i = 0; i < line.length(); i += 4){
                 ++codeWords;
                 if (codeWords > (255 - dataWords)){
-                    throw new IOException("Programoje per daug instrukciju");
+                    throw new IOException("Too many commands.");
                 }
                 String word = line.substring(i, i+4);
                 commands.add(word);

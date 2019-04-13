@@ -1,3 +1,6 @@
+/*
+Holds the GUI. Also starts the JavaFX main stage.
+*/
 package interactivemodelos;
 
 import java.io.File;
@@ -23,54 +26,51 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
 /**
- * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
+ * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
  */
+
 public class InteractiveModelOS extends Application {
     Button button2 = new Button();
 
     @Override
     public void start(Stage primaryStage) {
-        // Pagrindinis pane, laikantis visus elementus
+        // Main pane, fixed size
         BorderPane root = new BorderPane();
         root.setMaxSize(1400, 800);
         root.setMinSize(1400, 800);
         
-        // Reali masina
+        // Real machine
         RealMachine rm = new RealMachine();
-        // Virtuali masina
+        // Virtual machine
         VirtualMachine vm = new VirtualMachine();
-        // Realus procesorius
-        System.out.println("Kuriama");
+        // Real CPU
         RealCPU rcpu = new RealCPU(rm.getSharedMemoryTracker());
-        System.out.println("Sukurta");
-        // Virtualus procesorius
+        // Virtual CPU
         VirtualCPU vcpu = new VirtualCPU();
         
-        // Ivesties ir isvesties irenginiai
+        // Input/ouput 'devices'
         TextField stdout = new TextField();
         stdout.setMinSize(500, 30);
         stdout.setMaxSize(500, 30);
         stdout.setEditable(false);
-        Label stdinLabel = new Label("Ivesties irenginys");
+        Label stdinLabel = new Label("Input device");
         stdinLabel.setTextFill(Color.RED);
-        Label stdinStatus = new Label("NEAKTYVUS");
+        Label stdinStatus = new Label("OFFLINE");
         stdinStatus.setTextFill(Color.DARKRED);
-        Label stdoutLabel = new Label("Isvesties irenginys");
+        Label stdoutLabel = new Label("Output device");
         stdoutLabel.setTextFill(Color.RED);
         
-        // Virtualios masinos uzkurimas
-        System.out.println("Kuriama VM");
         rm.loadVirtualMachine(rcpu, vm);
         
-        // RM atminties pane
+        // RM memory pane
         GridPane rmMem = new GridPane();
         rmMem.gridLinesVisibleProperty().setValue(Boolean.TRUE);
         
-        // VM atminties pane
+        // VM memory pane
         GridPane vmMem = new GridPane();
         vmMem.gridLinesVisibleProperty().setValue(Boolean.TRUE);
         
-        // Nustatymai rmMem ir vmMem stulpeliams
+        // Settings for rmMem ir vmMem columns
         for (int i = 0; i < 16; ++i){
             ColumnConstraints column = new ColumnConstraints();
             column.setMinWidth(58);
@@ -80,7 +80,7 @@ public class InteractiveModelOS extends Application {
             vmMem.getColumnConstraints().add(column);
         }
 
-        // Realios atminties zodziai
+        // Real memory words
         for (int block = 0; block < 64; ++block){
             for (int word = 0; word < 16; ++word){
                 Label temp = new Label("label");
@@ -89,13 +89,13 @@ public class InteractiveModelOS extends Application {
                 rmMem.add(temp, word, block);
             }
             
-            // Papildomas stulpelis bloko numeriams
+            // Extra column for numbering
             Label blockNum = new Label(Integer.toHexString(block));
             blockNum.setTextFill(Color.TEAL);
             rmMem.add(blockNum, 17, block);
         }
         
-        // Virtualios atminties zodziai
+        // Virtual memory words
         for (int block = 0; block < 16; ++block){
             for (int word = 0; word < 16; ++word){
                 Label temp = new Label("label");
@@ -104,13 +104,13 @@ public class InteractiveModelOS extends Application {
                 vmMem.add(temp, word, block);
             }
             
-            // Papildomas stulpelis bloko numeriams
+            // Extra column for numbering
             Label blockNum = new Label(Integer.toHexString(block));
             blockNum.setTextFill(Color.TEAL);
             vmMem.add(blockNum, 17, block);
         }
         
-        Button startProg = new Button("Leisti programa");
+        Button startProg = new Button("Launch programme");
         startProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -119,39 +119,31 @@ public class InteractiveModelOS extends Application {
                         //
                     }
                 } catch (NumberFormatException | IOException ex) {
-                    //rcpu.mdProperty().setValue("1");
-                    //rcpu.piProperty().setValue("1");
                     stdout.setText(ex.getMessage());
-                    //rcpu.mdProperty().setValue("0");
                     System.out.println(ex);
-                    //blogas formatavimas
                 }
             }
         });
         
-        Button step = new Button("Vykdyti zingsni");
+        Button step = new Button("Step");
         step.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 try {
                     vm.executeCommand(vcpu, rcpu, stdinStatus, stdout);
                 } catch (NumberFormatException | IOException ex) {
-                    //rcpu.mdProperty().setValue("1");
-                    //rcpu.piProperty().setValue("1");
                     stdout.setText(ex.getMessage());
-                    //rcpu.mdProperty().setValue("0");
                     System.out.println(ex);
-                    //blogas formatavimas
                 }
             }
         });
         
-        Button reset = new Button("Isvalyti");
+        Button reset = new Button("Reset");
         reset.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 vcpu.pcProperty().setValue(Integer.toHexString(vm.getInitialPC()/16) + Integer.toHexString(vm.getInitialPC()%16));
-                vcpu.setSF(0);
+                vcpu.sfProperty().setValue("0");
                 vcpu.axProperty().setValue("0");
                 vcpu.bxProperty().setValue("0");
                 rcpu.tmrProperty().setValue("a");
@@ -164,7 +156,7 @@ public class InteractiveModelOS extends Application {
             }
         });
         
-        Button loadProg = new Button("Uzkrauti programa");
+        Button loadProg = new Button("Load");
         loadProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -180,7 +172,7 @@ public class InteractiveModelOS extends Application {
                 rcpu.chProperty().setValue(String.valueOf(temp));
                 
                 FileChooser browser = new FileChooser();
-                browser.getExtensionFilters().add(new ExtensionFilter("Tekstiniai programos failai", "*.txt"));
+                browser.getExtensionFilters().add(new ExtensionFilter("Text source files", "*.txt"));
                 File sourceCode = browser.showOpenDialog(primaryStage);
                 
                 temp = rcpu.chProperty().get().toCharArray();
@@ -190,9 +182,8 @@ public class InteractiveModelOS extends Application {
                 if (sourceCode == null){
                     return;
                 }
-                vm.loadProgram(sourceCode, vcpu);
-                //vcpu.setPC(0);
-                vcpu.setSF(0);
+                vm.loadProgramme(sourceCode, vcpu);
+                vcpu.sfProperty().setValue("0");
                 vcpu.axProperty().setValue("0");
                 vcpu.bxProperty().setValue("0");
                 rcpu.tmrProperty().setValue("a");
@@ -203,7 +194,7 @@ public class InteractiveModelOS extends Application {
             }
         });
         
-        // Realaus procesoriaus pane
+        // Real CPU pane
         VBox rcpuData = new VBox();
         rcpuData.setStyle("-fx-border-style: solid inside;");
         rcpuData.setSpacing(10);
@@ -318,7 +309,7 @@ public class InteractiveModelOS extends Application {
         shmem.getChildren().add(shm);
         
         
-        // Virtualaus procesoriaus pane
+        // Virtual CPU pane
         VBox vcpuData = new VBox();
         vcpuData.setStyle("-fx-border-style: solid inside;");  
         vcpuData.setSpacing(10);
@@ -359,9 +350,9 @@ public class InteractiveModelOS extends Application {
         container.getChildren().add(vsf);
         vcpuData.getChildren().add(container);
         
-        // Kairinio pane objektu laikykle
+        // 'Left side' objects
         VBox leftOrganized = new VBox();
-        Label rmemLabel = new Label("Reali atmintis");
+        Label rmemLabel = new Label("Real memory");
         rmemLabel.setTextFill(Color.RED);
         leftOrganized.getChildren().add(rmemLabel);
         
@@ -370,12 +361,12 @@ public class InteractiveModelOS extends Application {
         wordLabel.setTextFill(Color.DARKCYAN);
         leftOrganized.getChildren().add(wordLabel);
         
-        // Scrollable reali atmintis
+        // Scrollable real memory
         ScrollPane rmemScroll = new ScrollPane(rmMem);
         rmemScroll.setMaxHeight(450);
         rmemScroll.setMinHeight(450);
         
-        // Scrollable virtuali atmintis
+        // Scrollable virtual memory
         ScrollPane vmemScroll = new ScrollPane(vmMem);
         vmemScroll.setMaxHeight(150);
         vmemScroll.setMinHeight(150);
@@ -386,11 +377,11 @@ public class InteractiveModelOS extends Application {
         vmemScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         
         leftOrganized.getChildren().add(rmemScroll);
-        Label vmemLabel = new Label("Virtuali atmintis");
+        Label vmemLabel = new Label("Virtual memory");
         vmemLabel.setTextFill(Color.RED);
         leftOrganized.getChildren().add(vmemLabel);
         
-        // Reikia naujo objekto, kitaip duplicate child exception
+        // Needs a separate label, otherwise throws duplicate child exception
         wordLabel = new Label(String.format("%9s%17s%17s%17s%16s%17s%17s%16s%16s%17s%17s%17s%17s%16s%17s%17s",
                 "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"));
         wordLabel.setTextFill(Color.DARKCYAN);
@@ -401,12 +392,12 @@ public class InteractiveModelOS extends Application {
         leftOrganized.getChildren().add(stdoutLabel);
         leftOrganized.getChildren().add(stdout);
         
-        // Desininio pane objektu laikykle
+        // 'Right side' objects
         VBox rightOrganized = new VBox();
         
-        Label rcpuLabel = new Label("Realus procesorius");
+        Label rcpuLabel = new Label("Real processor");
         rcpuLabel.setTextFill(Color.RED);
-        Label vcpuLabel = new Label("Virtualus procesorius");
+        Label vcpuLabel = new Label("Virtual processor");
         vcpuLabel.setTextFill(Color.RED);
 
         rightOrganized.getChildren().add(startProg);

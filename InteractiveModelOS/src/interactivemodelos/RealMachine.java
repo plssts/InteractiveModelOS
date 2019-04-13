@@ -1,4 +1,5 @@
 /*
+Manages real memory and loads virtual machines (in this application - only one).
  */
 package interactivemodelos;
 
@@ -7,13 +8,14 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
 /**
- * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
+ * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
  */
+
 public class RealMachine {
     private final SimpleStringProperty[][] memory;
     
     public RealMachine(){
-        // Pirminis atminties uzkrovimas po 4 baitus
+        // Initial memory loading
         memory = new SimpleStringProperty[64][16];
         for (int i = 0; i < 64; ++i){
             memory[i] = new SimpleStringProperty[16];
@@ -32,12 +34,12 @@ public class RealMachine {
     }
     
     public void loadVirtualMachine(RealCPU cpu, VirtualMachine vm){
-        int pagingTableBlock = new Random().nextInt(63);    // Paskutinis 64 blokas yra bendra atmintis
+        int pagingTableBlock = new Random().nextInt(63);    // Last block is shared memory
         String ptrValue = Integer.toHexString(pagingTableBlock);
-        System.out.println("\tIsskirta puslapiu lentele su PTR: " + ptrValue);
+        System.out.println("\tPaging tabele PTR: " + ptrValue);
         
         int allocatedBlocks = 0;
-        String[] pagingTable = new String[16];              // Pati lentele ir jos reiksmes
+        String[] pagingTable = new String[16];              // Actual table
         for (int i = 0; i < 16; ++i){
             pagingTable[i] = "0";
         }
@@ -45,13 +47,13 @@ public class RealMachine {
         
         while (allocatedBlocks < 16){
             boolean validBlock = true;
-            int block = new Random().nextInt(63);           // Paskutinis 64 blokas yra bendra atmintis
+            int block = new Random().nextInt(63);           // Last block is shared memory
             for (String b : pagingTable){
                 if (Integer.parseInt(b, 16) == block || block == pagingTableBlock){
                     validBlock = false;
                 }
             }
-            // Tinkamas blokas - ji paimame atminciai
+            // This block is valid - we take it
             if (validBlock){
                 pagingTable[index] = Integer.toHexString(block);
                 ++index;
@@ -59,14 +61,12 @@ public class RealMachine {
             }
         }
         
-        System.out.println("\tIsskirti 16 virtualiu bloku");
-        
         cpu.setPTR(Integer.parseInt(ptrValue, 16));
         for (int i = 0; i < 16; ++i){
             memory[pagingTableBlock][i].setValue(pagingTable[i]);
         }
         bindVirtualWordsToReal(Integer.parseInt(ptrValue, 16), vm, pagingTable);
-        System.out.println("\tSujungti virtualieji blokai su realiaisiais");
+        System.out.println("\tVirtual blocks mapped to real blocks");
     }
     
     public void bindVirtualWordsToReal(int ptr, VirtualMachine vm, String[] pagingTable){
@@ -74,7 +74,7 @@ public class RealMachine {
         for (String pagingStr : pagingTable){
             int currentRealBlock = Integer.parseInt(pagingStr, 16);
             for (int i = 0; i < 16 ; ++i){
-                // Puslapiavimo mechanizmas
+                // Paging the memory
                 vm.setVirtualWordProperty(currentVirtualBlock, i, memoryProperty(currentRealBlock, i));
             }
             ++currentVirtualBlock;

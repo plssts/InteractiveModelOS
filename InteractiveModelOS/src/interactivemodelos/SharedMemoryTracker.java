@@ -1,4 +1,5 @@
 /*
+Makes the shared memory visible to a virtual machine without direct access to the real CPU
  */
 package interactivemodelos;
 
@@ -6,8 +7,9 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
 /**
- * @author Paulius Staisiunas, Informatika 3 k., 3 gr.
+ * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
  */
+
 public class SharedMemoryTracker {
     private final SimpleStringProperty[] memory;
     
