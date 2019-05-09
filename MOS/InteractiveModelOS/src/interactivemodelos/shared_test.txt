@@ -1,0 +1,13 @@
+DATA
+32 w "Out wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww", 0
+CODE 20
+SHL0
+SHW M000
+SHL5
+SHU0
+SHW M500
+SHLF
+SHU5
+SHR 00MF
+SHUF
+HALT
