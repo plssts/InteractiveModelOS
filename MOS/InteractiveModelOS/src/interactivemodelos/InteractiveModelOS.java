@@ -6,14 +6,25 @@ package interactivemodelos;
 import java.io.File;
 import java.io.IOException;
 import javafx.application.Application;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
@@ -36,8 +47,8 @@ public class InteractiveModelOS extends Application {
     public void start(Stage primaryStage) {
         // Main pane, fixed size
         BorderPane root = new BorderPane();
-        root.setMaxSize(1400, 800);
-        root.setMinSize(1400, 800);
+        root.setMaxSize(1200, 800);
+        root.setMinSize(1200, 800);
         
         // Real machine
         RealMachine rm = new RealMachine();
@@ -420,7 +431,89 @@ public class InteractiveModelOS extends Application {
         root.setLeft(leftOrganized);
         root.setRight(rightOrganized);
         
-        Scene scene = new Scene(root, 1400, 800);
+        // Tells a little more about selected resource/process
+        TextArea procInfo = new TextArea();
+        procInfo.setMinSize(400, 100);
+        procInfo.setMaxSize(400, 100);
+        procInfo.editableProperty().setValue(Boolean.FALSE);
+        
+        TextArea resInfo = new TextArea();
+        resInfo.setMinSize(400, 100);
+        resInfo.setMaxSize(400, 100);
+        resInfo.editableProperty().setValue(Boolean.FALSE);
+        
+        // Enveloping tab pane
+        TabPane all = new TabPane();
+        Tab machineTab = new Tab();
+        machineTab.setContent(root);
+        machineTab.setClosable(false);
+        machineTab.textProperty().setValue("Active VM");
+        all.getTabs().add(machineTab);
+        
+        // Resource and process tab
+        Tab procresTab = new Tab();
+        
+        ObservableList<Process> procList = FXCollections.<Process>observableArrayList();
+        ObservableList<Resource> resList = FXCollections.<Resource>observableArrayList();
+        ListView<Process> processes = new ListView<>(procList);
+        processes.setOrientation(Orientation.VERTICAL);
+        processes.setMaxSize(400, 400);
+        processes.setMinSize(400, 400);
+        
+        ListView<Resource> resources = new ListView<>(resList);
+        resources.setOrientation(Orientation.VERTICAL);
+        resources.setMaxSize(400, 400);
+        resources.setMinSize(400, 400);
+        
+        processes.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Process>(){
+            @Override
+            public void changed(ObservableValue<? extends Process> observable, Process oldValue, Process newValue) {
+                /*try {
+                    if (resources.getSelectionModel().getSelectedIndex() != -1){
+                        resources.getSelectionModel().clearSelection();
+                    }
+                } catch(IndexOutOfBoundsException ex){}*/
+                procInfo.setText(newValue.getAllValues());
+            }
+        });
+        
+        resources.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Resource>(){
+            @Override
+            public void changed(ObservableValue<? extends Resource> observable, Resource oldValue, Resource newValue) {
+                /*try {
+                    if (processes.getSelectionModel().getSelectedIndex() != -1){
+                        processes.getSelectionModel().clearSelection();
+                    }
+                } catch(IndexOutOfBoundsException ex){}*/
+                resInfo.setText(newValue.getAllValues());
+            }
+        });
+        
+        //test purposes only
+        procList.add(new Process("test"));
+        resList.add(new Resource("other test"));
+        
+        VBox base = new VBox();
+        HBox infos = new HBox();
+        HBox lists = new HBox();
+        lists.getChildren().add(new Label("Processes"));
+        lists.getChildren().add(processes);
+        lists.getChildren().add(new Label("Resources"));
+        lists.getChildren().add(resources);
+        base.getChildren().add(lists);
+        
+        infos.getChildren().add(new Label("Processes"));
+        infos.getChildren().add(procInfo);
+        infos.getChildren().add(new Label("Resources"));
+        infos.getChildren().add(resInfo);
+        base.getChildren().add(infos);
+        
+        procresTab.setContent(base);
+        procresTab.setClosable(false);
+        procresTab.textProperty().setValue("Processes / Resources");
+        all.getTabs().add(procresTab);
+        
+        Scene scene = new Scene(all, 1200, 800);
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);
         primaryStage.show();
