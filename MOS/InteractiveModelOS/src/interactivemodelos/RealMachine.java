@@ -3,6 +3,7 @@ Manages real memory and loads virtual machines (in this application - only one).
  */
 package interactivemodelos;
 
+import java.util.ArrayList;
 import java.util.Random;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -13,8 +14,10 @@ import javafx.beans.property.StringProperty;
 
 public class RealMachine {
     private final SimpleStringProperty[][] memory;
+    private ArrayList<Integer> allBlc;
     
     public RealMachine(){
+        allBlc = new ArrayList<>();
         // Initial memory loading
         memory = new SimpleStringProperty[64][16];
         for (int i = 0; i < 64; ++i){
@@ -33,8 +36,29 @@ public class RealMachine {
         return new SharedMemoryTracker(shared);
     }
     
-    public void loadVirtualMachine(RealCPU cpu, VirtualMachine vm){
-        int pagingTableBlock = new Random().nextInt(63);    // Last block is shared memory
+    public boolean checkIfMemoryAvailable(){
+        return allBlc.size() <= 12;
+    }
+    
+    public boolean checkFreeBlock(int block){
+        for (Integer blocks : allBlc){
+            if (block == blocks){
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    public boolean loadVirtualMachine(RealCPU cpu, VirtualMachine vm){
+        if (!checkIfMemoryAvailable()){
+            return false;
+        }
+        
+        int pagingTableBlock;
+        do {
+            pagingTableBlock = new Random().nextInt(63); // Last block is shared memory
+        } while(!checkFreeBlock(pagingTableBlock));
+        
         String ptrValue = Integer.toHexString(pagingTableBlock);
         System.out.println("\tPaging tabele PTR: " + ptrValue);
         
@@ -49,13 +73,14 @@ public class RealMachine {
             boolean validBlock = true;
             int block = new Random().nextInt(63);           // Last block is shared memory
             for (String b : pagingTable){
-                if (Integer.parseInt(b, 16) == block || block == pagingTableBlock){
+                if (Integer.parseInt(b, 16) == block || block == pagingTableBlock || !checkFreeBlock(block)){
                     validBlock = false;
                 }
             }
             // This block is valid - we take it
             if (validBlock){
                 pagingTable[index] = Integer.toHexString(block);
+                allBlc.add(block);
                 ++index;
                 ++allocatedBlocks;
             }
@@ -66,7 +91,9 @@ public class RealMachine {
             memory[pagingTableBlock][i].setValue(pagingTable[i]);
         }
         bindVirtualWordsToReal(Integer.parseInt(ptrValue, 16), vm, pagingTable);
+        allBlc.add(pagingTableBlock);
         System.out.println("\tVirtual blocks mapped to real blocks");
+        return true;
     }
     
     public void bindVirtualWordsToReal(int ptr, VirtualMachine vm, String[] pagingTable){

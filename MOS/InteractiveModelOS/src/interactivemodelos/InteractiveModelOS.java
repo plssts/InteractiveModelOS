@@ -5,7 +5,10 @@ package interactivemodelos;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
@@ -35,14 +38,15 @@ import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.WindowEvent;
+import process.StartStop;
 
 /**
  * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
  */
 
 public class InteractiveModelOS extends Application {
-    Button button2 = new Button();
-
     @Override
     public void start(Stage primaryStage) {
         // Main pane, fixed size
@@ -489,10 +493,6 @@ public class InteractiveModelOS extends Application {
             }
         });
         
-        //test purposes only
-        procList.add(new Process("test"));
-        resList.add(new Resource("other test"));
-        
         VBox base = new VBox();
         HBox infos = new HBox();
         HBox lists = new HBox();
@@ -512,6 +512,11 @@ public class InteractiveModelOS extends Application {
         procresTab.setClosable(false);
         procresTab.textProperty().setValue("Processes / Resources");
         all.getTabs().add(procresTab);
+        
+        // Resources starting here
+        StartStop startstop = new StartStop("StartStop");
+        procList.add(startstop);
+        //resList.add(new Resource("other test"));
         
         Scene scene = new Scene(all, 1200, 800);
         primaryStage.setScene(scene);
