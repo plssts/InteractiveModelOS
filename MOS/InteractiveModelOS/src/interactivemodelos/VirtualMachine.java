@@ -145,12 +145,12 @@ public class VirtualMachine {
     }
     
     // Unnecessarily long method for command execution
-    public boolean executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
+    public int executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
         if (TMRstep){
             rcpu.decrTMRandCheck(nextTMRdecr);
             nextTMRdecr = 0;
             TMRstep = false;
-            return true;
+            return 1;
         }
         if (nonCommandStep){
             if (setModeTo0){
@@ -174,13 +174,13 @@ public class VirtualMachine {
                     throw new IOException("[INT] " + message + " [INT]");
                 }
                 clearBooleans();
-                return true;
+                return 2;
                 
             } 
             if (setModeTo1){
                 rcpu.mdProperty().setValue("1");
                 setModeTo1 = false;
-                return true;
+                return 1;
                 
             } 
             if (!nextPIval.isEmpty()){
@@ -192,13 +192,13 @@ public class VirtualMachine {
                 else {
                     stdout.setText("[INT] Overflow [INT]");
                 }
-                return true;
+                return 1;
                 
             } 
             if (!nextSIval.isEmpty()){
                 rcpu.siProperty().setValue(nextSIval);
                 nextSIval = "";
-                return true;
+                return 1;
                 
             }
             if (wwNeedsOpening){
@@ -208,7 +208,7 @@ public class VirtualMachine {
                 char[] temp = rcpu.chProperty().get().toCharArray();
                 temp[1] = '1';
                 rcpu.chProperty().setValue(String.valueOf(temp));
-                return true;
+                return 1;
                 
             }
             if (wwNeedsClosing){
@@ -218,7 +218,7 @@ public class VirtualMachine {
                 char[] temp = rcpu.chProperty().get().toCharArray();
                 temp[1] = '0';
                 rcpu.chProperty().setValue(String.valueOf(temp));
-                return true;
+                return 1;
             }
             
             if (rwNeedsOpening){
@@ -228,7 +228,7 @@ public class VirtualMachine {
                 char[] temp = rcpu.chProperty().get().toCharArray();
                 temp[0] = '1';
                 rcpu.chProperty().setValue(String.valueOf(temp));
-                return true;
+                return 1;
                 
             }
             if (rwNeedsClosing){
@@ -238,7 +238,7 @@ public class VirtualMachine {
                 char[] temp = rcpu.chProperty().get().toCharArray();
                 temp[0] = '0';
                 rcpu.chProperty().setValue(String.valueOf(temp));
-                return true;
+                return 1;
             }
             
             if (shmNeedsLocking){
@@ -248,7 +248,7 @@ public class VirtualMachine {
                 char[] temp = rcpu.shmProperty().get().toCharArray();
                 temp[nextSHword] = '1';
                 rcpu.shmProperty().setValue(String.valueOf(temp));
-                return true;
+                return 1;
                 
             }
             if (shmNeedsUnlocking){
@@ -258,41 +258,41 @@ public class VirtualMachine {
                 char[] temp = rcpu.shmProperty().get().toCharArray();
                 temp[nextSHword] = '0';
                 rcpu.shmProperty().setValue(String.valueOf(temp));
-                return true;
+                return 1;
                 
             }
             
             if (finaliseSHL){
                 finaliseSHL = false;
                 setModeTo0 = true;
-                return true;
+                return 1;
             }
             
             if (finaliseSHU){
                 finaliseSHU = false;
                 setModeTo0 = true;
-                return true;
+                return 1;
             }
             
             if (shrNeedsStart){
                 nonCommandStep = false;
                 shrNeedsStart = false;
-                return true;
+                return 1;
             }
             if (shwNeedsStart){
                 nonCommandStep = false;
                 shwNeedsStart = false;
-                return true;
+                return 1;
             }
             if (finaliseSHR){
                 finaliseSHR = false;
                 clearBooleans();
-                return true;
+                return 1;
             }
             if (finaliseSHW){
                 finaliseSHW = false;
                 clearBooleans();
-                return true;
+                return 1;
             }
         }
         
@@ -302,7 +302,7 @@ public class VirtualMachine {
         String position = memory[pcBlock][pcWord].getValue();
         
         if (rcpu.siProperty().get().equals("7")){ // HALT
-            return false;
+            return 0;
         }
         
         System.out.println(position);
@@ -316,12 +316,12 @@ public class VirtualMachine {
                     setModeTo1 = true;
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
                 }
                 vcpu.setPC(pc + offset + 1);
                 nextTMRdecr = 1;
                 TMRstep = true;
-                return true;
+                return 1;
             }
             if (position.startsWith("J-")){
                 int offset = Integer.parseInt(position.substring(2, 4), 16);
@@ -331,12 +331,12 @@ public class VirtualMachine {
                     setModeTo1 = true;
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
                 }
                 vcpu.setPC(pc - offset + 1);
                 nextTMRdecr = 1;
                 TMRstep = true;
-                return true;
+                return 1;
             }
 
             if (position.startsWith("WW")){
@@ -344,13 +344,13 @@ public class VirtualMachine {
                     nextSIval = "2";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    return true;
+                    return 1;
                 }
                 
                 if (!wwChannelOpened && !contentProcessed){
                     wwNeedsOpening = true;
                     nonCommandStep = true;
-                    return true;
+                    return 1;
                 }
 
                 if (!contentProcessed){
@@ -360,34 +360,34 @@ public class VirtualMachine {
 
                     stdout.appendText(memory[srcBlock][srcWord].get());
                     contentProcessed = true;
-                    return true;
+                    return 1;
                 }
                 
                 if (wwChannelOpened){
                     wwNeedsClosing = true;
                     nonCommandStep = true;
                     nextSIval = "0";
-                    return true;
+                    return 1;
                 }
                 
                 vcpu.setPC(pc+1);
                 contentProcessed = false;
                 nextTMRdecr = 3;
                 TMRstep = true;
-                return true;
+                return 1;
             }
             if (position.startsWith("RW")){
                 if (rcpu.siProperty().get().equals("0") && !contentProcessed){
                     nextSIval = "1";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    return true;
+                    return 1;
                 }
 
                 if (!rwChannelOpened && !contentProcessed){
                     rwNeedsOpening = true;
                     nonCommandStep = true;
-                    return true;
+                    return 1;
                 }
 
                 if (!contentProcessed){
@@ -422,21 +422,21 @@ public class VirtualMachine {
                         throw new IOException("Bad string formatting or size greater than 4 bytes.");
                     }
                     contentProcessed = true;
-                    return true;
+                    return 1;
                 }
 
                 if (rwChannelOpened){
                     rwNeedsClosing = true;
                     nonCommandStep = true;
                     nextSIval = "0";
-                    return true;
+                    return 1;
                 }
                 
                 vcpu.setPC(pc+1);
                 contentProcessed = false;
                 nextTMRdecr = 3;
                 TMRstep = true;
-                return true;
+                return 1;
             }
 
             if (position.startsWith("SHL")){
@@ -447,13 +447,13 @@ public class VirtualMachine {
                     nextSIval = "5";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    return true;
+                    return 1;
                 }
                 
                 if (!shmLocked){
                     shmNeedsLocking = true;
                     nonCommandStep = true;
-                    return true;
+                    return 1;
                 }
                 
                 finaliseSHL = true;
@@ -463,7 +463,7 @@ public class VirtualMachine {
                 TMRstep = true;
                 nonCommandStep = true;
                 nextSIval = "0";
-                return true;
+                return 1;
             }
             if (position.startsWith("SHU")){
                 int id = Integer.parseInt(position.substring(3, 4), 16);
@@ -473,13 +473,13 @@ public class VirtualMachine {
                     nextSIval = "6";
                     nonCommandStep = true;
                     setModeTo1 = true;
-                    return true;
+                    return 1;
                 }
                 
                 if (!shmUnlocked){
                     shmNeedsUnlocking = true;
                     nonCommandStep = true;
-                    return true;
+                    return 1;
                 }
                 
                 finaliseSHU = true;
@@ -489,14 +489,14 @@ public class VirtualMachine {
                 TMRstep = true;
                 nonCommandStep = true;
                 nextSIval = "0";
-                return true;
+                return 1;
 
             }
         } catch(NumberFormatException ex){
             nextPIval = "1";
             nonCommandStep = true;
             setModeTo1 = true;
-            return true;
+            return 1;
         }
         
         try {
@@ -551,7 +551,7 @@ public class VirtualMachine {
                     vcpu.setPC(pc+1);
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
 
                 case "SUB ":
                     ++pc;
@@ -603,7 +603,7 @@ public class VirtualMachine {
                     vcpu.setPC(pc+1);
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
 
                 case "CMP ":
                     ++pc;
@@ -648,7 +648,7 @@ public class VirtualMachine {
                     vcpu.setPC(pc+1);
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
 
                 case "MUL ":
                     ++pc;
@@ -700,7 +700,7 @@ public class VirtualMachine {
                     vcpu.setPC(pc+1);
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
 
                 case "DIV ":
                     ++pc;
@@ -733,7 +733,7 @@ public class VirtualMachine {
                         nextPIval = "3";
                         nonCommandStep = true;
                         setModeTo1 = true;
-                        return true;
+                        return 1;
                     }
 
                     result = (int)Long.parseLong(first.get(), 16) / (int)Long.parseLong(second.get(), 16);
@@ -752,7 +752,7 @@ public class VirtualMachine {
                     vcpu.setPC(pc+1);
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
 
                 case "MOD ":
                     ++pc;
@@ -785,7 +785,7 @@ public class VirtualMachine {
                         nextPIval = "3";
                         nonCommandStep = true;
                         setModeTo1 = true;
-                        return true;
+                        return 1;
                     }
 
                     result = (int)Long.parseLong(first.get(), 16) % (int)Long.parseLong(second.get(), 16);
@@ -804,7 +804,7 @@ public class VirtualMachine {
                     vcpu.setPC(pc+1);
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
 
                 case "MOV ":
                     ++pc;
@@ -827,7 +827,7 @@ public class VirtualMachine {
                                 nextPIval = "1";
                                 nonCommandStep = true;
                                 setModeTo1 = true;
-                                return true;
+                                return 1;
                             }
                     }
                     switch (registers.substring(2, 4)){
@@ -844,14 +844,14 @@ public class VirtualMachine {
                                 nextPIval = "1";
                                 nonCommandStep = true;
                                 setModeTo1 = true;
-                                return true;
+                                return 1;
                             }
                     }
                     first.setValue(second.get());
                     vcpu.setPC(pc+1);
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
 
                 case "MOVC":
                     ++pc;
@@ -871,12 +871,12 @@ public class VirtualMachine {
                         nextPIval = "3";
                         nonCommandStep = true;
                         setModeTo1 = true;
-                        return true;
+                        return 1;
                     }
                     vcpu.setPC(pc+1);
                     nextTMRdecr = 1;
                     TMRstep = true;
-                    return true;
+                    return 1;
 
                 // JMP section. Could be implemented better.
                 case "JEQL":
@@ -895,18 +895,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc + offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
 
                         case "-":
@@ -918,18 +918,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc - offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                         default:
                             throw new IOException("Bad offset formatting.");
@@ -951,18 +951,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc + offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
 
                         case "-":
@@ -974,18 +974,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc - offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                         default:
                             throw new IOException("Bad offset formatting.");
@@ -1009,18 +1009,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc + offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
 
                         case "-":
@@ -1034,18 +1034,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc - offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                         default:
                             throw new IOException("Bad offset formatting.");
@@ -1067,18 +1067,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc + offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
 
                         case "-":
@@ -1090,18 +1090,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc - offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                         default:
                             throw new IOException("Bad offset formatting.");
@@ -1123,18 +1123,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc + offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
 
                         case "-":
@@ -1146,18 +1146,18 @@ public class VirtualMachine {
                                     setModeTo1 = true;
                                     nextTMRdecr = 1;
                                     TMRstep = true;
-                                    return true;
+                                    return 1;
                                 }
                                 vcpu.setPC(pc - offset + 1);
                                 nextTMRdecr = 1;
                                 TMRstep = true;
-                                return true;
+                                return 1;
                             }
                             else {
                                 vcpu.setPC(pc+1);
                                 nextTMRdecr = 1;
                                 TMRstep = true; 
-                                return true;
+                                return 1;
                             }
                         default:
                             throw new IOException("Bad offset formatting.");
@@ -1175,14 +1175,14 @@ public class VirtualMachine {
                             first = rcpu.smt().memoryProperty(sharedWord);
                             second = memory[Integer.parseInt(registers.substring(2, 3), 16)][Integer.parseInt(registers.substring(3, 4), 16)];
                             first.setValue(second.get());
-                            return true;
+                            return 1;
                         } else {
                             // Shared memory was not locked
                             nextTMRdecr = 3;
                             TMRstep = true;
                             nextPIval = "5";
                             nonCommandStep = true;
-                            return true;
+                            return 1;
                         }
                     }
                     nextTMRdecr = 3;
@@ -1190,7 +1190,7 @@ public class VirtualMachine {
                     vcpu.setPC(pc+2);
                     contentProcessed = false;
                     clearBooleans();
-                    return true;
+                    return 1;
 
                 case "SHR ":
                     if (!contentProcessed){
@@ -1204,14 +1204,14 @@ public class VirtualMachine {
                             second = rcpu.smt().memoryProperty(sharedWord);
                             first = memory[Integer.parseInt(registers.substring(0, 1), 16)][Integer.parseInt(registers.substring(1, 2), 16)];
                             first.setValue(second.get());
-                            return true;
+                            return 1;
                         } else {
                             // Shared memory was not locked
                             nextTMRdecr = 3;
                             TMRstep = true;
                             nextPIval = "5";
                             nonCommandStep = true;
-                            return true;
+                            return 1;
                         }
                     }
                     nextTMRdecr = 3;
@@ -1219,12 +1219,12 @@ public class VirtualMachine {
                     vcpu.setPC(pc+2);
                     contentProcessed = false;
                     clearBooleans();
-                    return true;
+                    return 1;
 
                 case "HALT":
                     if (rcpu.mdProperty().get().equals("0")){
                         rcpu.mdProperty().setValue("1");
-                        return true;
+                        return 1;
                     }
 
                     System.out.println("\u001B[31mEnd of programme.\u001B[0m");
@@ -1232,20 +1232,20 @@ public class VirtualMachine {
                     TMRstep = true;
 
                     rcpu.siProperty().setValue("7");
-                    return false;
+                    return 0;
             }
         } catch(NumberFormatException ex){
             nextPIval = "1";
             nonCommandStep = true;
             setModeTo1 = true;
-            return true;
+            return 1;
         }
         
         // Unrecognised command
         nextPIval = "2";
         nonCommandStep = true;
         setModeTo1 = true;
-        return true;
+        return 1;
     }
     
     private String arrangeFlags(boolean sign, boolean zero, boolean carry){

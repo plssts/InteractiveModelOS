@@ -11,13 +11,28 @@ package interactivemodelos;
  */
 public class Process {
     private String externalName;
+    private String status;
+    private String waitResource;
     
     public Process(String externalName){
         this.externalName = externalName;
+        status = "";
+        waitResource = "";
     }
     
+    public String getName(){
+        return externalName;
+    }
+    
+    public void setWR(String resource){
+        waitResource = resource;
+    }
+    
+    public void setStatus(String s){
+        status = s;
+    }
     public String getAllValues(){
-        return "some test value of a process";
+        return externalName + "\n" + status + "\n" + waitResource;
     }
     
     @Override

@@ -56,12 +56,14 @@ public class InteractiveModelOS extends Application {
         
         // Real machine
         RealMachine rm = new RealMachine();
-        // Virtual machine
-        VirtualMachine vm = new VirtualMachine();
+        // Virtual machine master view
+        VirtualMachine vmMaster = new VirtualMachine();
         // Real CPU
         RealCPU rcpu = new RealCPU(rm.getSharedMemoryTracker());
-        // Virtual CPU
-        VirtualCPU vcpu = new VirtualCPU();
+        // Virtual CPU master view
+        VirtualCPU vcpuMaster = new VirtualCPU();
+        
+        Scheduler sch = new Scheduler();
         
         // Input/ouput 'devices'
         TextField stdout = new TextField();
@@ -75,7 +77,7 @@ public class InteractiveModelOS extends Application {
         Label stdoutLabel = new Label("Output device");
         stdoutLabel.setTextFill(Color.RED);
         
-        rm.loadVirtualMachine(rcpu, vm);
+        //rm.loadVirtualMachine(rcpu, vm);
         
         // RM memory pane
         GridPane rmMem = new GridPane();
@@ -115,7 +117,7 @@ public class InteractiveModelOS extends Application {
             for (int word = 0; word < 16; ++word){
                 Label temp = new Label("label");
                         
-                temp.textProperty().bind(vm.memoryProperty(block, word));
+                temp.textProperty().bind(vmMaster.memoryProperty(block, word));
                 vmMem.add(temp, word, block);
             }
             
@@ -125,13 +127,38 @@ public class InteractiveModelOS extends Application {
             vmMem.add(blockNum, 17, block);
         }
         
-        Button startProg = new Button("Launch programme");
-        startProg.setOnAction(new EventHandler<ActionEvent>() {
+        //TESTING CASE CURRENTLY --------------------------------------------------------------------------------------------------------------------
+        /*Button test = new Button("Gimme other VM");
+        test.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 try {
-                    while(vm.executeCommand(vcpu, rcpu, stdinStatus, stdout)){
-                        //
+                    // Scheduler finds other VM - TODO
+                    VirtualMachine testvm = new VirtualMachine();
+                    System.out.println(rm.loadVirtualMachine(rcpu, testvm));
+                } catch (NumberFormatException ex) {
+                    stdout.setText(ex.getMessage());
+                    System.out.println(ex);
+                }
+            }
+        });*/
+        //TESTING CASE CURRENTLY --------------------------------------------------------------------------------------------------------------------
+        
+        Button startProg = new Button("Run VM programme");
+        startProg.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                int outcome;
+                try {
+                    if (sch.allVMs.isEmpty()){
+                        System.out.println("There are no VMs to run");
+                        return;
+                    }
+                    while(true){
+                        outcome = sch.executeCommand(rcpu, stdinStatus, stdout);
+                        if (outcome == 0){
+                            break;
+                        }
                     }
                 } catch (NumberFormatException | IOException ex) {
                     stdout.setText(ex.getMessage());
@@ -145,7 +172,7 @@ public class InteractiveModelOS extends Application {
             @Override
             public void handle(ActionEvent event) {
                 try {
-                    vm.executeCommand(vcpu, rcpu, stdinStatus, stdout);
+                    sch.step(rcpu, stdinStatus, stdout);
                 } catch (NumberFormatException | IOException ex) {
                     stdout.setText(ex.getMessage());
                     System.out.println(ex);
@@ -153,7 +180,7 @@ public class InteractiveModelOS extends Application {
             }
         });
         
-        Button reset = new Button("Reset");
+        /*Button reset = new Button("Reset");
         reset.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -169,18 +196,20 @@ public class InteractiveModelOS extends Application {
                 stdout.setText("");
                 vm.reset();
             }
-        });
+        });*/
         
         Button loadProg = new Button("Load");
         loadProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                vm.reset();
+                /*vm.reset();
                 for (int i = 0; i < 16; ++i){
                     for (int j = 0; j < 16 ; ++j){
                         vm.setWord(i, j, "0");
                     }
-                }
+                }*/
+                VirtualMachine vm = new VirtualMachine();
+                VirtualCPU vcpu = new VirtualCPU();
                 
                 char[] temp = rcpu.chProperty().get().toCharArray();
                 temp[2] = '1';
@@ -197,15 +226,22 @@ public class InteractiveModelOS extends Application {
                 if (sourceCode == null){
                     return;
                 }
-                vm.loadProgramme(sourceCode, vcpu);
-                vcpu.sfProperty().setValue("0");
-                vcpu.axProperty().setValue("0");
-                vcpu.bxProperty().setValue("0");
-                rcpu.tmrProperty().setValue("a");
-                rcpu.mdProperty().setValue("0");
-                rcpu.siProperty().setValue("0");
-                rcpu.piProperty().setValue("0");
-                rcpu.shmProperty().setValue("0000000000000000");
+                
+                if (rm.loadVirtualMachine(vcpu, vm, sch)){
+                    vm.loadProgramme(sourceCode, vcpu);
+                    vcpu.sfProperty().setValue("0");
+                    vcpu.axProperty().setValue("0");
+                    vcpu.bxProperty().setValue("0");
+                }
+                else {
+                    stdout.setText("There is not enough space for another VM");
+                }
+
+                //rcpu.tmrProperty().setValue("a");
+                //rcpu.mdProperty().setValue("0");
+                //rcpu.siProperty().setValue("0");
+                //rcpu.piProperty().setValue("0");
+                //rcpu.shmProperty().setValue("0000000000000000");
             }
         });
         
@@ -228,7 +264,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label pc = new Label("PC");    
-        pc.textProperty().bind(vcpu.pcProperty());
+        pc.textProperty().bind(vcpuMaster.pcProperty());
         container.getChildren().add(new Label("PC"));
         container.getChildren().add(pc);
         rcpuData.getChildren().add(container);
@@ -255,7 +291,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label sf = new Label("SF");    
-        sf.textProperty().bind(vcpu.sfProperty());
+        sf.textProperty().bind(vcpuMaster.sfProperty());
         container.getChildren().add(new Label("SF"));
         container.getChildren().add(sf);
         rcpuData.getChildren().add(container);
@@ -273,7 +309,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label ax = new Label("AX");    
-        ax.textProperty().bind(vcpu.axProperty());
+        ax.textProperty().bind(vcpuMaster.axProperty());
         container.getChildren().add(new Label("AX"));
         container.getChildren().add(ax);
         rcpuData.getChildren().add(container);
@@ -282,7 +318,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label bx = new Label("BX");    
-        bx.textProperty().bind(vcpu.bxProperty());
+        bx.textProperty().bind(vcpuMaster.bxProperty());
         container.getChildren().add(new Label("BX"));
         container.getChildren().add(bx);
         rcpuData.getChildren().add(container);
@@ -333,7 +369,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label vpc = new Label();    
-        vpc.textProperty().bind(vcpu.pcProperty());
+        vpc.textProperty().bind(vcpuMaster.pcProperty());
         container.getChildren().add(new Label("PC"));
         container.getChildren().add(vpc);
         vcpuData.getChildren().add(container);
@@ -342,7 +378,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label vax = new Label();    
-        vax.textProperty().bind(vcpu.axProperty());
+        vax.textProperty().bind(vcpuMaster.axProperty());
         container.getChildren().add(new Label("AX"));
         container.getChildren().add(vax);
         vcpuData.getChildren().add(container);
@@ -351,7 +387,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label vbx = new Label();    
-        vbx.textProperty().bind(vcpu.bxProperty());
+        vbx.textProperty().bind(vcpuMaster.bxProperty());
         container.getChildren().add(new Label("BX"));
         container.getChildren().add(vbx);
         vcpuData.getChildren().add(container);
@@ -360,7 +396,7 @@ public class InteractiveModelOS extends Application {
         container.setAlignment(Pos.CENTER);
         container.setSpacing(10);
         Label vsf = new Label();    
-        vsf.textProperty().bind(vcpu.sfProperty());
+        vsf.textProperty().bind(vcpuMaster.sfProperty());
         container.getChildren().add(new Label("SF"));
         container.getChildren().add(vsf);
         vcpuData.getChildren().add(container);
@@ -418,7 +454,11 @@ public class InteractiveModelOS extends Application {
         rightOrganized.getChildren().add(startProg);
         rightOrganized.getChildren().add(step);
         rightOrganized.getChildren().add(loadProg);
-        rightOrganized.getChildren().add(reset);
+        //rightOrganized.getChildren().add(reset);
+        
+        // REMOVE AFTER TESTING
+        rightOrganized.getChildren().add(test);
+        
         HBox processors = new HBox();
         processors.setSpacing(10);
         VBox real = new VBox();
@@ -457,17 +497,20 @@ public class InteractiveModelOS extends Application {
         // Resource and process tab
         Tab procresTab = new Tab();
         
-        ObservableList<Process> procList = FXCollections.<Process>observableArrayList();
-        ObservableList<Resource> resList = FXCollections.<Resource>observableArrayList();
-        ListView<Process> processes = new ListView<>(procList);
+        ListView<Process> processes = new ListView<>(sch.procList);
         processes.setOrientation(Orientation.VERTICAL);
         processes.setMaxSize(400, 400);
         processes.setMinSize(400, 400);
         
-        ListView<Resource> resources = new ListView<>(resList);
+        ListView<Resource> resources = new ListView<>(sch.resList);
         resources.setOrientation(Orientation.VERTICAL);
         resources.setMaxSize(400, 400);
         resources.setMinSize(400, 400);
+        
+        // Processes starting here
+        StartStop startstop = new StartStop("StartStop");
+        sch.procList.add(startstop);
+        //resList.add(new Resource("other test"));
         
         processes.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Process>(){
             @Override
@@ -512,11 +555,6 @@ public class InteractiveModelOS extends Application {
         procresTab.setClosable(false);
         procresTab.textProperty().setValue("Processes / Resources");
         all.getTabs().add(procresTab);
-        
-        // Resources starting here
-        StartStop startstop = new StartStop("StartStop");
-        procList.add(startstop);
-        //resList.add(new Resource("other test"));
         
         Scene scene = new Scene(all, 1200, 800);
         primaryStage.setScene(scene);

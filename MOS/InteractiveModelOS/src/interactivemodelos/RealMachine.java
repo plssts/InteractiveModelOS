@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Random;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.util.Pair;
 
 /**
  * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
@@ -37,7 +38,7 @@ public class RealMachine {
     }
     
     public boolean checkIfMemoryAvailable(){
-        return allBlc.size() <= 12;
+        return allBlc.size() <= 48;
     }
     
     public boolean checkFreeBlock(int block){
@@ -49,7 +50,7 @@ public class RealMachine {
         return true;
     }
     
-    public boolean loadVirtualMachine(RealCPU cpu, VirtualMachine vm){
+    public boolean loadVirtualMachine(VirtualCPU cpu, VirtualMachine vm, Scheduler sch){
         if (!checkIfMemoryAvailable()){
             return false;
         }
@@ -86,13 +87,14 @@ public class RealMachine {
             }
         }
         
-        cpu.setPTR(Integer.parseInt(ptrValue, 16));
+        //cpu.setPTR(Integer.parseInt(ptrValue, 16));
         for (int i = 0; i < 16; ++i){
             memory[pagingTableBlock][i].setValue(pagingTable[i]);
         }
-        bindVirtualWordsToReal(Integer.parseInt(ptrValue, 16), vm, pagingTable);
+        //bindVirtualWordsToReal(Integer.parseInt(ptrValue, 16), vm, pagingTable);
         allBlc.add(pagingTableBlock);
-        System.out.println("\tVirtual blocks mapped to real blocks");
+        sch.includeVM(ptrValue, new Pair(cpu, vm));
+        //System.out.println("\tVirtual blocks mapped to real blocks");
         return true;
     }
     
