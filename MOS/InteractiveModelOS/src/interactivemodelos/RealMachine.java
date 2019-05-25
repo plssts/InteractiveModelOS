@@ -16,6 +16,7 @@ import javafx.util.Pair;
 public class RealMachine {
     private final SimpleStringProperty[][] memory;
     private ArrayList<Integer> allBlc;
+    private String lastAllocPTR;
     
     public RealMachine(){
         allBlc = new ArrayList<>();
@@ -91,11 +92,16 @@ public class RealMachine {
         for (int i = 0; i < 16; ++i){
             memory[pagingTableBlock][i].setValue(pagingTable[i]);
         }
-        //bindVirtualWordsToReal(Integer.parseInt(ptrValue, 16), vm, pagingTable);
+        bindVirtualWordsToReal(Integer.parseInt(ptrValue, 16), vm, pagingTable);
         allBlc.add(pagingTableBlock);
         sch.includeVM(ptrValue, new Pair(cpu, vm));
+        lastAllocPTR = ptrValue;
         //System.out.println("\tVirtual blocks mapped to real blocks");
         return true;
+    }
+    
+    public String getLastPTR(){
+        return lastAllocPTR;
     }
     
     public void bindVirtualWordsToReal(int ptr, VirtualMachine vm, String[] pagingTable){

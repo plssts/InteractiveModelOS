@@ -11,16 +11,23 @@ import javafx.beans.property.StringProperty;
  */
 
 public class VirtualCPU {
-    private final SimpleStringProperty PC;
-    private final SimpleStringProperty SF;
-    private final SimpleStringProperty AX;
-    private final SimpleStringProperty BX;
+    private SimpleStringProperty PC;
+    private SimpleStringProperty SF;
+    private SimpleStringProperty AX;
+    private SimpleStringProperty BX;
     
     public VirtualCPU(){
         PC = new SimpleStringProperty("0");
         SF = new SimpleStringProperty("0");
         AX = new SimpleStringProperty("0");
         BX = new SimpleStringProperty("0");
+    }
+    
+    public void setAll(StringProperty pc, StringProperty sf, StringProperty ax, StringProperty bx){
+        PC = (SimpleStringProperty) pc;
+        SF = (SimpleStringProperty) sf;
+        AX = (SimpleStringProperty) ax;
+        BX = (SimpleStringProperty) bx;
     }
     
     public void setPC(int value){

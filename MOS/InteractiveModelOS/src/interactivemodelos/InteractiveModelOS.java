@@ -40,7 +40,9 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
+import javafx.util.Pair;
 import process.StartStop;
+import process.VM;
 
 /**
  * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
@@ -87,7 +89,7 @@ public class InteractiveModelOS extends Application {
         GridPane vmMem = new GridPane();
         vmMem.gridLinesVisibleProperty().setValue(Boolean.TRUE);
         
-        // Settings for rmMem ir vmMem columns
+        // Settings for rmMem and vmMem columns
         for (int i = 0; i < 16; ++i){
             ColumnConstraints column = new ColumnConstraints();
             column.setMinWidth(58);
@@ -172,7 +174,7 @@ public class InteractiveModelOS extends Application {
             @Override
             public void handle(ActionEvent event) {
                 try {
-                    sch.step(rcpu, stdinStatus, stdout);
+                    sch.step(rcpu, stdinStatus, stdout, vcpuMaster, vmMaster);
                 } catch (NumberFormatException | IOException ex) {
                     stdout.setText(ex.getMessage());
                     System.out.println(ex);
@@ -232,6 +234,9 @@ public class InteractiveModelOS extends Application {
                     vcpu.sfProperty().setValue("0");
                     vcpu.axProperty().setValue("0");
                     vcpu.bxProperty().setValue("0");
+                    VM virtualmachine = new VM("VirtualMachine" + rm.getLastPTR());
+                    sch.procList.add(virtualmachine);
+                    sch.includeVM(rm.getLastPTR(), new Pair(vcpu, vm));
                 }
                 else {
                     stdout.setText("There is not enough space for another VM");
@@ -457,7 +462,7 @@ public class InteractiveModelOS extends Application {
         //rightOrganized.getChildren().add(reset);
         
         // REMOVE AFTER TESTING
-        rightOrganized.getChildren().add(test);
+        //rightOrganized.getChildren().add(test);
         
         HBox processors = new HBox();
         processors.setSpacing(10);

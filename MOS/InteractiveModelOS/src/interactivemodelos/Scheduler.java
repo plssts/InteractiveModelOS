@@ -18,6 +18,7 @@ public class Scheduler {
     ObservableList<Resource> resList;
     
     Map allVMs;
+    //Map vmsRegisters;
     Pair<VirtualCPU, VirtualMachine> currentVM;
     enum State {
         EXECUTE_VM, SWITCH_VM, STOP_MOS
@@ -27,12 +28,13 @@ public class Scheduler {
     
     public Scheduler(){
         allVMs = new HashMap();
+        //vmsRegisters = new HashMap();
         procList = FXCollections.<Process>observableArrayList();
         resList = FXCollections.<Resource>observableArrayList();
-        state = State.EXECUTE_VM; // change later
+        state = State.SWITCH_VM;
     }
     
-    public void step(RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException{
+    public void step(RealCPU rcpu, Label stdinStatus, TextField stdout, VirtualCPU cpumaster, VirtualMachine vmmaster) throws IOException{
         int outcome;
         switch(state){
             case EXECUTE_VM:
@@ -54,9 +56,13 @@ public class Scheduler {
                         procList.remove(p);
                         temp.setStatus("RUNNING");
                         procList.add(temp);
-                        System.out.println("Switching to machine PTR: " + p.getName().substring(13));
-                        currentVM = (Pair<VirtualCPU, VirtualMachine>)allVMs.get(p.getName().substring(13));
+                        System.out.println("Switching to machine PTR: " + p.getName().substring(14));
+                        currentVM = (Pair<VirtualCPU, VirtualMachine>)allVMs.get(p.getName().substring(14));
                         state = State.EXECUTE_VM;
+                        remapParameters(cpumaster, vmmaster);
+                    }
+                    else {
+                        System.out.println("Cannot find other VMs to execute");
                     }
                     // no virtual machines - do something else instead
                 }
@@ -65,7 +71,21 @@ public class Scheduler {
     }
     
     public void remapParameters(VirtualCPU cpumaster, VirtualMachine vmmaster){
+        System.out.println("Remapping VMEM memory to VM now");
+        for (int i = 0; i < 16; ++i){
+            for (int j = 0; j < 16; ++j){
+                //vmmaster.setVirtualWordProperty(i, j, currentVM.getValue().memoryProperty(i, j));
+                vmmaster.setWord(i, j, currentVM.getValue().getWord(i, j));
+            }
+        }
         
+        System.out.println("Remapping VCPU to VM now");
+        //cpumaster.setAll(currentVM.getKey().pcProperty(), currentVM.getKey().sfProperty(),
+        //                 currentVM.getKey().axProperty(), currentVM.getKey().bxProperty());
+        cpumaster.pcProperty().setValue(currentVM.getKey().pcProperty().getValue());
+        cpumaster.sfProperty().setValue(currentVM.getKey().sfProperty().getValue());
+        cpumaster.axProperty().setValue(currentVM.getKey().axProperty().getValue());
+        cpumaster.bxProperty().setValue(currentVM.getKey().bxProperty().getValue());
     }
     
     public int executeCommand(RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException{

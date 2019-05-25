@@ -1268,5 +1268,6 @@ public class VirtualMachine {
     
     public void setVirtualWordProperty(int block, int word, StringProperty ssp){
         memory[block][word] = (SimpleStringProperty) ssp;
+        memory[block][word].setValue(memory[block][word].get());
     }
 }
