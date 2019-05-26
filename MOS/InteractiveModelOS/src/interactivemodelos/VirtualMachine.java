@@ -145,11 +145,18 @@ public class VirtualMachine {
     }
     
     // Unnecessarily long method for command execution
+    // Returns 1 if current VM can continue execution
+    // Returns 0 if current VM has halted and can be removed
+    // Returns 2 if current VM encountered an interrupt (not possible to recover)
+    // Returns 3 if the timer has depleted and we needa new VM
     public int executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
         if (TMRstep){
-            rcpu.decrTMRandCheck(nextTMRdecr);
+            int outcome = rcpu.decrTMRandCheck(nextTMRdecr);
             nextTMRdecr = 0;
             TMRstep = false;
+            if (outcome == 1 && !throwableInt){ // Throwable interrupt is going to switch machines anyway
+                return 3;
+            }
             return 1;
         }
         if (nonCommandStep){

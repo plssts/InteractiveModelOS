@@ -4,11 +4,14 @@ A. Einstein
  */
 package interactivemodelos;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.util.Pair;
@@ -16,6 +19,9 @@ import javafx.util.Pair;
 public class Scheduler {
     ObservableList<Process> procList;
     ObservableList<Resource> resList;
+    //File sourceCode = null;
+    Button load;
+    //RealMachine rm;
     
     Map allVMs;
     //Map vmsRegisters;
@@ -26,6 +32,10 @@ public class Scheduler {
     
     private State state;
     
+    private boolean freeTIM = true;
+    private boolean goJCL = false;
+    private boolean tofreeJCL = true;
+    
     public Scheduler(){
         allVMs = new HashMap();
         //vmsRegisters = new HashMap();
@@ -34,7 +44,21 @@ public class Scheduler {
         state = State.SWITCH_VM;
     }
     
-    public void step(RealCPU rcpu, Label stdinStatus, TextField stdout, VirtualCPU cpumaster, VirtualMachine vmmaster, boolean continuous) throws IOException{
+    /*public void linkRM(RealMachine rm){
+        this.rm = rm;
+    }*/
+    
+    public void addbtn(Button btn){
+        load = btn;
+    }
+    
+    /*public void setFile(File file){
+        sourceCode = file;
+    }*/
+    
+    // We return 100 if no special action is needed. The reson for a higher number than 64 is 
+    // the fact that 0 can be both successful exit and PTR to remove. So 100 was chosen as OK status
+    public int step(RealCPU rcpu, Label stdinStatus, TextField stdout, VirtualCPU cpumaster, VirtualMachine vmmaster, boolean continuous) throws IOException{
         int outcome;
         switch(state){
             case EXECUTE_VM:
@@ -42,7 +66,7 @@ public class Scheduler {
                     do {
                         outcome = currentVM.getValue().executeCommand(currentVM.getKey(), rcpu, stdinStatus, stdout);
                         remapParameters(cpumaster, vmmaster); // update values after call
-                        if (outcome == 0){ // HALT - VM has finished its programme
+                        if (outcome == 0 || outcome == 2){ // HALT - VM has finished its programme
                             System.out.println("HALT was reached by this VM");
                             state = State.SWITCH_VM;
                             excludeVM(rcpu.ptrProperty().get());
@@ -61,9 +85,66 @@ public class Scheduler {
                                     break;
                                 }
                             }
+                            for (Process p : procList){
+                                if (p.getName().equals("JobGovernor" + temp)){
+                                    Process proc = p;
+                                    procList.remove(p);
+                                    proc.setStatus("BLOCKED");
+                                    proc.setWR("Nonexistent");
+                                    ArrayList<String> arr = proc.getChildren();
+                                    arr.clear();
+                                    proc.setChildren(arr);
+                                    arr = proc.getOwnedRs();
+                                    arr.clear();
+                                    proc.setOwnedRs(arr);
+                                    proc.modifyName("JobGovernor-dormant:" + temp);
+                                    procList.add(proc);
+                                    break;
+                                }
+                            }
+                            
+                            for (Resource rsrc : resList){
+                                if (rsrc.getName().equals("Interrupt")){
+                                    rsrc.setOwned("-");
+                                    break;
+                                }
+                            }
+                            
+                            for (Resource rsrc : resList){
+                                if (rsrc.getName().equals("FromInterrupt")){
+                                    ArrayList<String> arr = rsrc.getWP();
+                                    arr.remove("JobGovernor" + temp);
+                                    rsrc.setWP(arr);
+                                    break;
+                                }
+                            }
+                            
                             System.out.println("Excluded VM " + temp);
                             currentVM = null;
-                            return;
+                            return Integer.parseInt(temp, 16);
+                        }
+                        
+                        if (outcome == 3){ // TMR has depleted for currentvm
+                            state = State.SWITCH_VM;
+                            String temp = rcpu.ptrProperty().get();
+                            for (Process p : procList){
+                                if (p.getName().equals("VirtualMachine" + temp)){
+                                    Process copy = p;
+                                    procList.remove(p);
+                                    copy.setStatus("READY");
+                                    procList.add(copy);
+                                    //rcpu.ptrProperty().setValue("0");
+                                    //rcpu.siProperty().setValue("0");
+                                    //rcpu.piProperty().setValue("0");
+                                    //rcpu.mdProperty().setValue("0");
+                                    //rcpu.tmrProperty().setValue("a");
+                                    //currentVM = new Pair(new VirtualCPU(), new VirtualMachine()); // null values
+                                    //remapParameters(cpumaster, vmmaster);
+                                    //currentVM = null;
+                                    break;
+                                }
+                            }
+                            return 100;
                         }
                     } while(continuous);
                 }
@@ -81,12 +162,44 @@ public class Scheduler {
                         state = State.EXECUTE_VM;
                         rcpu.ptrProperty().setValue(p.getName().substring(14));
                         remapParameters(cpumaster, vmmaster);
-                        return;
+                        
+                        for (Process pr : procList){
+                            if (pr.getName().equals("Main")){
+                                pr.setStatus("BLOCKED");
+                                pr.setWR("TaskReady");
+                                ArrayList<String> tmp = pr.getOwnedRs();
+                                tmp.remove("TaskReady");
+                                pr.setOwnedRs(tmp);
+                                break;
+                            }
+                        }
+                        
+                        for (Resource r : resList){
+                            if (r.getName().equals("TaskReady")){
+                                ArrayList<String> tp = r.getWP();
+                                tp.add("Main");
+                                r.setWP(tp);
+                                break;
+                            }
+                        }
+                        
+                        for (Resource r : resList){
+                            if (r.getName().equals("Interrupt")){
+                                //ArrayList<String> tp = r.getWP();
+                                r.setOwned(p.getName());
+                                //tp.add("Main");
+                                //r.setWP(tp);
+                                break;
+                            }
+                        }
+                        
+                        return 100;
                     }
                 }
                 System.out.println("Cannot find other VMs to execute");
                 break;
         }
+        return 100;
     }
     
     public void remapParameters(VirtualCPU cpumaster, VirtualMachine vmmaster){

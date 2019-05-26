@@ -3,6 +3,7 @@ Holds the GUI. Also starts the JavaFX main stage.
 */
 package interactivemodelos;
 
+import com.sun.jmx.mbeanserver.Util;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import javafx.stage.WindowEvent;
 import javafx.util.Pair;
 import process.StartStop;
 import process.VM;
+import resource.VirtualMemory;
 
 /**
  * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
@@ -54,8 +56,8 @@ public class InteractiveModelOS extends Application {
     public void start(Stage primaryStage) {
         // Main pane, fixed size
         BorderPane root = new BorderPane();
-        root.setMaxSize(1200, 800);
-        root.setMinSize(1200, 800);
+        root.setMaxSize(1210, 800);
+        root.setMinSize(1210, 800);
         
         // Real machine
         RealMachine rm = new RealMachine();
@@ -130,24 +132,7 @@ public class InteractiveModelOS extends Application {
             vmMem.add(blockNum, 17, block);
         }
         
-        //TESTING CASE CURRENTLY --------------------------------------------------------------------------------------------------------------------
-        /*Button test = new Button("Gimme other VM");
-        test.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                try {
-                    // Scheduler finds other VM - TODO
-                    VirtualMachine testvm = new VirtualMachine();
-                    System.out.println(rm.loadVirtualMachine(rcpu, testvm));
-                } catch (NumberFormatException ex) {
-                    stdout.setText(ex.getMessage());
-                    System.out.println(ex);
-                }
-            }
-        });*/
-        //TESTING CASE CURRENTLY --------------------------------------------------------------------------------------------------------------------
-        
-        Button startProg = new Button("Run VM programme");
+        /*Button startProg = new Button("Run VM programme");
         startProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -167,14 +152,40 @@ public class InteractiveModelOS extends Application {
                     System.out.println(ex);
                 }
             }
-        });
+        });*/
+        
+        //boolean initialLoad = true;
+        //boolean nowLoadJG = false;
         
         Button step = new Button("Step");
         step.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
+                int outcome;
                 try {
-                    sch.step(rcpu, stdinStatus, stdout, vcpuMaster, vmMaster, false);
+                    outcome = sch.step(rcpu, stdinStatus, stdout, vcpuMaster, vmMaster, false);
+                    if (outcome < 100){ // Signal to free memory with this PTR
+                        ArrayList<Integer> blocks = new ArrayList<>();
+                        for (int i = 0; i < 16; ++i){
+                            String word = rm.getWord(outcome, i);
+                            blocks.add(Integer.parseInt(word, 16));
+                        }
+                        
+                        for (Integer i : blocks){
+                            for (int j = 0; j < 16; ++j){
+                                rm.setWord(i, j, "0");
+                                rm.setWord(outcome, j, "0");
+                            }
+                        }
+                        
+                        for (Resource rr : sch.resList){
+                            if (rr.getName().equals("VirtualMemory")){
+                                rr.decrBlocks(17);
+                            }
+                        }
+                        blocks.add(outcome);
+                        rm.removeBlocks(blocks);
+                    }
                 } catch (java.util.ConcurrentModificationException ex){
                     
                 }
@@ -203,47 +214,255 @@ public class InteractiveModelOS extends Application {
             }
         });*/
         
+        //File sourceCode;
+        
+        
         Button loadProg = new Button("Load");
+        //sch.addbtn(loadProg);
+        //sch.linkRM(rm);
         loadProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
+                //if (initialLoad){
+                VirtualMachine vm = new VirtualMachine();
+                VirtualCPU vcpu = new VirtualCPU();
+
+                char[] temp = rcpu.chProperty().get().toCharArray();
+                temp[2] = '1';
+                rcpu.chProperty().setValue(String.valueOf(temp));
+
+                FileChooser browser = new FileChooser();
+                browser.getExtensionFilters().add(new ExtensionFilter("Text source files", "*.txt"));
+                File sourceCode = browser.showOpenDialog(primaryStage);
+
+                temp = rcpu.chProperty().get().toCharArray();
+                temp[2] = '0';
+                rcpu.chProperty().setValue(String.valueOf(temp));
+
+                if (sourceCode == null){
+                    return;
+                }
+                
+                //sch.setFile(sourceCode);
+                //loadProg.setDisable(true);
+                
+                // TaskInMemory is freed - we read the source code
+                for (Resource r : sch.resList){
+                    if (r.getName().equals("TaskInMemory")){
+                        r.setFreed("ReadUI");
+                        r.setOwned("JobCtrlLangInterpreter");
+                        ArrayList<String> tmp = r.getWP();
+                        tmp.remove("JobCtrlLangInterpreter");
+                        r.setWP(tmp);
+                        break;
+                    }
+                }
+                
+                // JCLI is unblocked - it received TaskInMemory
+                for (Process p : sch.procList){
+                    if (p.getName().equals("JobCtrlLangInterpreter")){
+                        p.setStatus("RUNNING");
+                        p.setWR("-");
+                        ArrayList<String> tmp = p.getOwnedRs();
+                        tmp.add("TaskInMemory");
+                        p.setOwnedRs(tmp);
+                        break;
+                    }
+                }
+                
+                // JCLI freed TaskProgrammeInMemory - Loader can receive it
+                for (Resource r : sch.resList){
+                    if (r.getName().equals("TaskProgrammeInMemory")){
+                        r.setFreed("JobCtrlLangInterpreter");
+                        r.setOwned("Loader");
+                        ArrayList<String> tmp = r.getWP();
+                        tmp.remove("Loader");
+                        r.setWP(tmp);
+                        break;
+                    }
+                }
+                
+                // JCLI is blocking again - waiting for TaskInMemory (other source code)
+                for (Process p : sch.procList){
+                    if (p.getName().equals("JobCtrlLangInterpreter")){
+                        p.setStatus("BLOCKED");
+                        p.setWR("TaskInMemory");
+                        ArrayList<String> tmp = p.getOwnedRs();
+                        tmp.remove("TaskInMemory");
+                        p.setOwnedRs(tmp);
+                        break;
+                    }
+                }
+                
+                // TaskInMemory has JCLI as waiting process again
+                for (Resource r : sch.resList){
+                    if (r.getName().equals("TaskInMemory")){
+                        //r.setFreed("ReadUI");
+                        //r.setOwned("JobCtrlLangInterpreter");
+                        ArrayList<String> tmp = r.getWP();
+                        tmp.add("JobCtrlLangInterpreter");
+                        r.setWP(tmp);
+                        break;
+                    }
+                }
+                
+                // Loader can now run with TaskProgrammeInMemory
+                for (Process p : sch.procList){
+                    if (p.getName().equals("Loader")){
+                        p.setStatus("RUNNING");
+                        p.setWR("-");
+                        ArrayList<String> tmp = p.getOwnedRs();
+                        tmp.add("TaskProgrammeInMemory");
+                        p.setOwnedRs(tmp);
+                        break;
+                    }
+                }
+                
+                // TaskReady was freed by Loader - Main can continue now
+                for (Resource r : sch.resList){
+                    if (r.getName().equals("TaskReady")){
+                        r.setFreed("Loader");
+                        r.setOwned("Main");
+                        ArrayList<String> tmp = r.getWP();
+                        tmp.remove("Main");
+                        r.setWP(tmp);
+                        break;
+                    }
+                }
+                
+                // Loader is blocking again - waiting for TaskProgrammeInMemory
+                for (Process p : sch.procList){
+                    if (p.getName().equals("Loader")){
+                        p.setStatus("BLOCKED");
+                        p.setWR("TaskProgrammeInMemory");
+                        ArrayList<String> tmp = p.getOwnedRs();
+                        tmp.remove("TaskProgrammeInMemory");
+                        p.setOwnedRs(tmp);
+                        break;
+                    }
+                }
+                
+                // TaskProgrammeInMemory has Loader in its waiting list
+                for (Resource r : sch.resList){
+                    if (r.getName().equals("TaskProgrammeInMemory")){
+                        //r.setFreed("JobCtrlLangInterpreter");
+                        //r.setOwned("Loader");
+                        ArrayList<String> tmp = r.getWP();
+                        tmp.add("Loader");
+                        r.setWP(tmp);
+                        break;
+                    }
+                }
+                
+                // Main can now run with TaskReady
+                for (Process p : sch.procList){
+                    if (p.getName().equals("Main")){
+                        p.setStatus("RUNNING");
+                        p.setWR("-");
+                        ArrayList<String> tmp = p.getOwnedRs();
+                        tmp.add("TaskReady");
+                        p.setOwnedRs(tmp);
+                        break;
+                    }
+                }
+
+                if (rm.loadVirtualMachine(vcpu, vm, sch)){
+                    vm.loadProgramme(sourceCode, vcpu);
+                    
+                    Process jg = new Process("JobGovernor" + rm.getLastPTR());
+                    jg.setStatus("BLOCKED");
+                    jg.setWR("FromInterrupt");
+                    jg.setParent("Main");
+                    //ArrayList<String> tmp = jg.getCreatedRs();
+                    //jg.setCreatedRs(tmp);
+                    ArrayList<String> tmp = jg.getOwnedRs();
+                    tmp.add("VMAllocated");
+                    tmp.add("InputRequest");
+                    tmp.add("OutputRequest");
+                    tmp.add("SHMControl");
+                    tmp.add("VirtualMemory");
+                    jg.setOwnedRs(tmp);
+                    tmp = jg.getChildren();
+                    tmp.add("VirtualMachine" + rm.getLastPTR());
+                    jg.setChildren(tmp);
+                    sch.procList.add(jg);
+                    
+                    // AllocateVM is waiting for another request
+                    for (Process p : sch.procList){
+                        if (p.getName().equals("AllocateVM")){
+                            p.setStatus("BLOCKED");
+                            p.setWR("VMRequest");
+                            // make allocatevm own some virtual memory
+                            break;
+                        }
+                    }
+                    
+                    // Some virtual memory is gone
+                    for (Resource rsrc : sch.resList){
+                        if (rsrc.getName().equals("VirtualMemory")){
+                            //r.setFreed("AllocateVM");
+                            //rsrc.setOwned("JobGovernor" + rm.getLastPTR());
+                            rsrc.incrBlocks(17);
+                            //tmp = r.getWP();
+                            //tmp.add("JobCtrlLangInterpreter");
+                            //r.setWP(tmp);
+                            break;
+                        }
+                    }
+                    
+                    // VMAllocated is now owned by latest JG
+                    for (Resource r : sch.resList){
+                        if (r.getName().equals("VMAllocated")){
+                            r.setFreed("AllocateVM");
+                            r.setOwned("JobGovernor" + rm.getLastPTR());
+                            //tmp = r.getWP();
+                            //tmp.add("JobCtrlLangInterpreter");
+                            //r.setWP(tmp);
+                            break;
+                        }
+                    }
+                    
+                    // New JG waits for FromInterrupt
+                    for (Resource r : sch.resList){
+                        if (r.getName().equals("FromInterrupt")){
+                            //r.setFreed("AllocateVM");
+                            //r.setOwned("JobGovernor" + rm.getLastPTR());
+                            tmp = r.getWP();
+                            tmp.add("JobGovernor" + rm.getLastPTR());
+                            r.setWP(tmp);
+                            break;
+                        }
+                    }
+                    
+                    vcpu.sfProperty().setValue("0");
+                    vcpu.axProperty().setValue("0");
+                    vcpu.bxProperty().setValue("0");
+
+                    VM virtualmachine = new VM("VirtualMachine" + rm.getLastPTR());
+                    virtualmachine.setParent("JobGovernor" + rm.getLastPTR());
+                    virtualmachine.setStatus("READY_STOPPED");
+                    sch.procList.add(virtualmachine);
+                    sch.includeVM(rm.getLastPTR(), new Pair(vcpu, vm));
+                }
+                else {
+                    // AllocateVM is blocking because there is no memory
+                    for (Process p : sch.procList){
+                        if (p.getName().equals("AllocateVM")){
+                            p.setStatus("BLOCKED");
+                            p.setWR("VirtualMemory");
+                            break;
+                        }
+                    }
+                    stdout.setText("There is not enough space for another VM");
+                }
+                //}
                 /*vm.reset();
                 for (int i = 0; i < 16; ++i){
                     for (int j = 0; j < 16 ; ++j){
                         vm.setWord(i, j, "0");
                     }
                 }*/
-                VirtualMachine vm = new VirtualMachine();
-                VirtualCPU vcpu = new VirtualCPU();
                 
-                char[] temp = rcpu.chProperty().get().toCharArray();
-                temp[2] = '1';
-                rcpu.chProperty().setValue(String.valueOf(temp));
-                
-                FileChooser browser = new FileChooser();
-                browser.getExtensionFilters().add(new ExtensionFilter("Text source files", "*.txt"));
-                File sourceCode = browser.showOpenDialog(primaryStage);
-                
-                temp = rcpu.chProperty().get().toCharArray();
-                temp[2] = '0';
-                rcpu.chProperty().setValue(String.valueOf(temp));
-                
-                if (sourceCode == null){
-                    return;
-                }
-                
-                if (rm.loadVirtualMachine(vcpu, vm, sch)){
-                    vm.loadProgramme(sourceCode, vcpu);
-                    vcpu.sfProperty().setValue("0");
-                    vcpu.axProperty().setValue("0");
-                    vcpu.bxProperty().setValue("0");
-                    VM virtualmachine = new VM("VirtualMachine" + rm.getLastPTR());
-                    sch.procList.add(virtualmachine);
-                    sch.includeVM(rm.getLastPTR(), new Pair(vcpu, vm));
-                }
-                else {
-                    stdout.setText("There is not enough space for another VM");
-                }
 
                 //rcpu.tmrProperty().setValue("a");
                 //rcpu.mdProperty().setValue("0");
@@ -459,7 +678,7 @@ public class InteractiveModelOS extends Application {
         Label vcpuLabel = new Label("Virtual processor");
         vcpuLabel.setTextFill(Color.RED);
 
-        rightOrganized.getChildren().add(startProg);
+        //rightOrganized.getChildren().add(startProg);
         rightOrganized.getChildren().add(step);
         rightOrganized.getChildren().add(loadProg);
         //rightOrganized.getChildren().add(reset);
@@ -485,13 +704,13 @@ public class InteractiveModelOS extends Application {
         
         // Tells a little more about selected resource/process
         TextArea procInfo = new TextArea();
-        procInfo.setMinSize(400, 100);
-        procInfo.setMaxSize(400, 100);
+        procInfo.setMinSize(400, 200);
+        procInfo.setMaxSize(400, 200);
         procInfo.editableProperty().setValue(Boolean.FALSE);
         
         TextArea resInfo = new TextArea();
-        resInfo.setMinSize(400, 100);
-        resInfo.setMaxSize(400, 100);
+        resInfo.setMinSize(400, 200);
+        resInfo.setMaxSize(400, 200);
         resInfo.editableProperty().setValue(Boolean.FALSE);
         
         // Enveloping tab pane
@@ -521,10 +740,10 @@ public class InteractiveModelOS extends Application {
         startstop.setWR("MOSEnd");
         startstop.setParent("-");
         ArrayList<String> temp = startstop.getOwnedRs();
-        temp.add("-");
+        //temp.add("-");
         startstop.setOwnedRs(temp);
         temp = startstop.getCreatedRs();
-        temp.add("-");
+        //temp.add("-");
         startstop.setCreatedRs(temp);
         temp = startstop.getChildren();
         temp.add("ReadUI");
@@ -538,6 +757,108 @@ public class InteractiveModelOS extends Application {
         startstop.setChildren(temp);
         sch.procList.add(startstop);
         
+        Process readui = new Process("ReadUI");
+        readui.setStatus("BLOCKED");
+        readui.setWR("UILoad");
+        readui.setParent("StartStop");
+        temp = readui.getCreatedRs();
+        readui.setCreatedRs(temp);
+        temp = readui.getOwnedRs();
+        temp.add("TaskInMemory");
+        readui.setOwnedRs(temp);
+        temp = readui.getChildren();
+        readui.setChildren(temp);
+        sch.procList.add(readui);
+        
+        Process jcl = new Process("JobCtrlLangInterpreter");
+        jcl.setStatus("BLOCKED");
+        jcl.setWR("TaskInMemory");
+        jcl.setParent("StartStop");
+        temp = jcl.getCreatedRs();
+        jcl.setCreatedRs(temp);
+        temp = jcl.getOwnedRs();
+        temp.add("TaskProgrammeInMemory");
+        jcl.setOwnedRs(temp);
+        temp = jcl.getChildren();
+        jcl.setChildren(temp);
+        sch.procList.add(jcl);
+        
+        Process loader = new Process("Loader");
+        loader.setStatus("BLOCKED");
+        loader.setWR("TaskProgrammeInMemory");
+        loader.setParent("StartStop");
+        temp = loader.getCreatedRs();
+        loader.setCreatedRs(temp);
+        temp = loader.getOwnedRs();
+        temp.add("TaskReady");
+        loader.setOwnedRs(temp);
+        temp = loader.getChildren();
+        loader.setChildren(temp);
+        sch.procList.add(loader);
+        
+        Process main = new Process("Main");
+        main.setStatus("BLOCKED");
+        main.setWR("TaskReady");
+        main.setParent("StartStop");
+        temp = main.getCreatedRs();
+        main.setCreatedRs(temp);
+        temp = main.getOwnedRs();
+        main.setOwnedRs(temp);
+        temp = main.getChildren();
+        main.setChildren(temp);
+        sch.procList.add(main);
+        
+        Process alloc = new Process("AllocateVM");
+        alloc.setStatus("BLOCKED");
+        alloc.setWR("VMRequest");
+        alloc.setParent("StartStop");
+        temp = alloc.getCreatedRs();
+        alloc.setCreatedRs(temp);
+        temp = alloc.getOwnedRs();
+        temp.add("VMAllocated");
+        alloc.setOwnedRs(temp);
+        temp = alloc.getChildren();
+        alloc.setChildren(temp);
+        sch.procList.add(alloc);
+        
+        Process interr = new Process("Interrupt");
+        interr.setStatus("BLOCKED");
+        interr.setWR("Interrupt");
+        interr.setParent("StartStop");
+        temp = interr.getCreatedRs();
+        interr.setCreatedRs(temp);
+        temp = interr.getOwnedRs();
+        temp.add("FromInterrupt");
+        interr.setOwnedRs(temp);
+        temp = interr.getChildren();
+        interr.setChildren(temp);
+        sch.procList.add(interr);
+        
+        // Resources below
+        Resource vmalloc = new Resource("VMAllocated");
+        vmalloc.setCreator("StartStop");
+        vmalloc.setFreed("-");
+        vmalloc.setOwned("AllocateVM");
+        sch.resList.add(vmalloc);
+        
+        Resource fi = new Resource("FromInterrupt");
+        fi.setCreator("StartStop");
+        fi.setFreed("-");
+        fi.setOwned("-");
+        //temp = new ArrayList<>();
+        //temp.add("StartStop");
+        //mosend.setWP(temp);
+        sch.resList.add(fi);
+        
+        Resource vm = new Resource("VirtualMemory");
+        vm.setCreator("StartStop");
+        vm.setFreed("-");
+        vm.setOwned("Potentially owned by multiple JGs");
+        //temp = new ArrayList<>();
+        //temp.add("StartStop");
+        //mosend.setWP(temp);
+        sch.resList.add(vm);
+        
         Resource mosend = new Resource("MOSEnd");
         mosend.setCreator("-");
         mosend.setFreed("-");
@@ -546,6 +867,51 @@ public class InteractiveModelOS extends Application {
         temp.add("StartStop");
         mosend.setWP(temp);
         sch.resList.add(mosend);
+        
+        Resource interrupt = new Resource("Interrupt");
+        interrupt.setCreator("StartStop");
+        interrupt.setFreed("-");
+        interrupt.setOwned("-");
+        temp = new ArrayList<>();
+        temp.add("Interrupt");
+        interrupt.setWP(temp);
+        sch.resList.add(interrupt);
+        
+        Resource uiload = new Resource("UILoad");
+        uiload.setCreator("StartStop");
+        uiload.setFreed("-");
+        uiload.setOwned("-");
+        temp = new ArrayList<>();
+        temp.add("ReadUI");
+        uiload.setWP(temp);
+        sch.resList.add(uiload);
+        
+        Resource taskmem = new Resource("TaskInMemory");
+        taskmem.setCreator("StartStop");
+        taskmem.setFreed("-");
+        taskmem.setOwned("ReadUI");
+        temp = new ArrayList<>();
+        temp.add("JobCtrlLangInterpreter");
+        taskmem.setWP(temp);
+        sch.resList.add(taskmem);
+        
+        Resource taskprogmem = new Resource("TaskProgrammeInMemory");
+        taskprogmem.setCreator("StartStop");
+        taskprogmem.setFreed("-");
+        taskprogmem.setOwned("JobCtrlLangInterpreter");
+        temp = new ArrayList<>();
+        temp.add("Loader");
+        taskprogmem.setWP(temp);
+        sch.resList.add(taskprogmem);
+        
+        Resource taskready = new Resource("TaskReady");
+        taskready.setCreator("StartStop");
+        taskready.setFreed("-");
+        taskready.setOwned("Loader");
+        temp = new ArrayList<>();
+        temp.add("Main");
+        taskready.setWP(temp);
+        sch.resList.add(taskready);
         
         processes.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Process>(){
             @Override
@@ -591,7 +957,7 @@ public class InteractiveModelOS extends Application {
         procresTab.textProperty().setValue("Processes / Resources");
         all.getTabs().add(procresTab);
         
-        Scene scene = new Scene(all, 1200, 800);
+        Scene scene = new Scene(all, 1210, 800);
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);
         primaryStage.show();

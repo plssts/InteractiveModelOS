@@ -12,18 +12,23 @@ import java.util.ArrayList;
  * @author LAPTOPELIS
  */
 public class Process {
-    private String externalName;
-    private String status;
-    private String waitResource;
-    private String parent;
-    private ArrayList<String> children = new ArrayList<>();
-    private ArrayList<String> createdRs = new ArrayList<>();
-    private ArrayList<String> ownedRs = new ArrayList<>();
+    protected String externalName;
+    protected String status;
+    protected String waitResource;
+    protected String parent;
+    protected ArrayList<String> children = new ArrayList<>();
+    protected ArrayList<String> createdRs = new ArrayList<>();
+    protected ArrayList<String> ownedRs = new ArrayList<>();
     
     public Process(String externalName){
         this.externalName = externalName;
         status = "";
         waitResource = "";
+    }
+    
+    // Used only by JG when quitting
+    public void modifyName(String name){
+        externalName = name;
     }
     
     public String getName(){
@@ -65,6 +70,7 @@ public class Process {
     public void setStatus(String s){
         status = s;
     }
+    
     public String getAllValues(){
         String output = "";
         output += "Name: " + externalName + "\nStatus: " + status + "\nWaiting for resource: " + waitResource + "\nParent: " + parent + "\nChildren: \n";

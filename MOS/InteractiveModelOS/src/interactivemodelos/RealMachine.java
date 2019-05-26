@@ -42,6 +42,10 @@ public class RealMachine {
         return allBlc.size() <= 48;
     }
     
+    public void removeBlocks(ArrayList<Integer> arr){
+        allBlc.removeAll(arr);
+    }
+    
     public boolean checkFreeBlock(int block){
         for (Integer blocks : allBlc){
             if (block == blocks){

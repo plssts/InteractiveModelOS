@@ -53,7 +53,9 @@ public class RealCPU {
         PC.setValue(sigByte + Integer.toHexString(value));
     }
     
-    public void decrTMRandCheck(int decr){
+    // Returns 0 if current VM still executes
+    // Returns 1 if a switch needs to be performed
+    public int decrTMRandCheck(int decr){
         if (decr > Integer.parseInt(TMR.get(), 16)){
             TMR.setValue("0");
         }
@@ -61,9 +63,11 @@ public class RealCPU {
         if (Integer.parseInt(TMR.get(), 16) > 0){
             TMR.setValue(Integer.toHexString(Integer.parseInt(TMR.getValue(), 16) - decr));
         } else {
-            // Should switch to other virtual machines. Not implemented.
+            // Should switch to other virtual machines
             TMR.setValue("a");
+            return 1;
         }
+        return 0;
     }
     
     public StringProperty ptrProperty(){

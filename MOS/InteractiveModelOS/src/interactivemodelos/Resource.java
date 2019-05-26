@@ -12,14 +12,20 @@ import java.util.ArrayList;
  * @author LAPTOPELIS
  */
 public class Resource {
-    private String externalName;
-    private ArrayList<String> waitingProc = new ArrayList<>();
-    private String creator;
-    private String freedBy;
-    private String ownedBy;
+    protected String externalName;
+    protected ArrayList<String> waitingProc = new ArrayList<>();
+    protected String creator;
+    protected String freedBy;
+    protected String ownedBy;
+    
+    protected int ownedBlocks = 0;
     
     public Resource(String externalName){
         this.externalName = externalName;
+    }
+    
+    public String getName(){
+        return externalName;
     }
     
     public ArrayList<String> getWP(){
@@ -54,6 +60,14 @@ public class Resource {
         return freedBy;
     }
     
+     public void incrBlocks(int val){
+        ownedBlocks += val;
+    }
+    
+    public void decrBlocks(int val){
+        ownedBlocks -= val;
+    }
+    
     public String getAllValues(){
         String output = "";
         output = "Name: " + externalName + "\nWaiting processes: \n";
@@ -61,6 +75,11 @@ public class Resource {
             output = output + s + "\n";
         }
         output += "Created by: " + creator + "\nFreed by: " + freedBy + "\nOwned by: " + ownedBy;
+        
+        if (externalName.equals("VirtualMemory")){
+            output = output + "\nCurrently there are " + ownedBlocks + " memory blocks used.";
+        }
+        
         return output;
     }
     
