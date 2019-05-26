@@ -5,6 +5,8 @@
  */
 package interactivemodelos;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author LAPTOPELIS
@@ -13,6 +15,10 @@ public class Process {
     private String externalName;
     private String status;
     private String waitResource;
+    private String parent;
+    private ArrayList<String> children = new ArrayList<>();
+    private ArrayList<String> createdRs = new ArrayList<>();
+    private ArrayList<String> ownedRs = new ArrayList<>();
     
     public Process(String externalName){
         this.externalName = externalName;
@@ -24,6 +30,34 @@ public class Process {
         return externalName;
     }
     
+    public void setParent(String p){
+        parent = p;
+    }
+    
+    public void setChildren(ArrayList<String> c){
+        children = c;
+    }
+    
+    public ArrayList<String> getChildren(){
+        return children;
+    }
+    
+    public void setCreatedRs(ArrayList<String> rs){
+        createdRs = rs;
+    }
+    
+    public ArrayList<String> getCreatedRs(){
+        return createdRs;
+    }
+    
+    public void setOwnedRs(ArrayList<String> rs){
+        ownedRs = rs;
+    }
+    
+    public ArrayList<String> getOwnedRs(){
+        return ownedRs;
+    }
+    
     public void setWR(String resource){
         waitResource = resource;
     }
@@ -32,7 +66,20 @@ public class Process {
         status = s;
     }
     public String getAllValues(){
-        return externalName + "\n" + status + "\n" + waitResource;
+        String output = "";
+        output += "Name: " + externalName + "\nStatus: " + status + "\nWaiting for resource: " + waitResource + "\nParent: " + parent + "\nChildren: \n";
+        for (String s : children){
+            output = output + s + "\n";
+        }
+        output += "Created resources: \n";
+        for (String s : createdRs){
+            output = output + s + "\n";
+        }
+        output += "Owned resources: \n";
+        for (String s : ownedRs){
+            output = output + s + "\n";
+        }
+        return output;
     }
     
     @Override

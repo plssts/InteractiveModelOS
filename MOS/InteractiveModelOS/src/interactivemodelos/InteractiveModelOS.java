@@ -5,6 +5,7 @@ package interactivemodelos;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -156,11 +157,10 @@ public class InteractiveModelOS extends Application {
                         System.out.println("There are no VMs to run");
                         return;
                     }
-                    while(true){
-                        outcome = sch.executeCommand(rcpu, stdinStatus, stdout);
-                        if (outcome == 0){
-                            break;
-                        }
+                    try {
+                        sch.step(rcpu, stdinStatus, stdout, vcpuMaster, vmMaster, true);
+                    } catch (java.util.ConcurrentModificationException ex){
+
                     }
                 } catch (NumberFormatException | IOException ex) {
                     stdout.setText(ex.getMessage());
@@ -174,8 +174,11 @@ public class InteractiveModelOS extends Application {
             @Override
             public void handle(ActionEvent event) {
                 try {
-                    sch.step(rcpu, stdinStatus, stdout, vcpuMaster, vmMaster);
-                } catch (NumberFormatException | IOException ex) {
+                    sch.step(rcpu, stdinStatus, stdout, vcpuMaster, vmMaster, false);
+                } catch (java.util.ConcurrentModificationException ex){
+                    
+                }
+                catch (NumberFormatException | IOException ex) {
                     stdout.setText(ex.getMessage());
                     System.out.println(ex);
                 }
@@ -514,8 +517,35 @@ public class InteractiveModelOS extends Application {
         
         // Processes starting here
         StartStop startstop = new StartStop("StartStop");
+        startstop.setStatus("BLOCKED");
+        startstop.setWR("MOSEnd");
+        startstop.setParent("-");
+        ArrayList<String> temp = startstop.getOwnedRs();
+        temp.add("-");
+        startstop.setOwnedRs(temp);
+        temp = startstop.getCreatedRs();
+        temp.add("-");
+        startstop.setCreatedRs(temp);
+        temp = startstop.getChildren();
+        temp.add("ReadUI");
+        temp.add("JobCtrlLangInterpreter");
+        temp.add("Loader");
+        temp.add("Main");
+        temp.add("AllocateVM");
+        temp.add("Interrupt");
+        temp.add("IData");
+        temp.add("OData");
+        startstop.setChildren(temp);
         sch.procList.add(startstop);
-        //resList.add(new Resource("other test"));
+        
+        Resource mosend = new Resource("MOSEnd");
+        mosend.setCreator("-");
+        mosend.setFreed("-");
+        mosend.setOwned("-");
+        temp = new ArrayList<>();
+        temp.add("StartStop");
+        mosend.setWP(temp);
+        sch.resList.add(mosend);
         
         processes.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Process>(){
             @Override

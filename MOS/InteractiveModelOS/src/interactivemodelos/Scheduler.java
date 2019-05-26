@@ -34,18 +34,38 @@ public class Scheduler {
         state = State.SWITCH_VM;
     }
     
-    public void step(RealCPU rcpu, Label stdinStatus, TextField stdout, VirtualCPU cpumaster, VirtualMachine vmmaster) throws IOException{
+    public void step(RealCPU rcpu, Label stdinStatus, TextField stdout, VirtualCPU cpumaster, VirtualMachine vmmaster, boolean continuous) throws IOException{
         int outcome;
         switch(state){
             case EXECUTE_VM:
                 if (currentVM != null){
-                    outcome = currentVM.getValue().executeCommand(currentVM.getKey(), rcpu, stdinStatus, stdout);
-                    if (outcome == 0){ // HALT - VM has finished its programme
-                        state = State.SWITCH_VM;
-                        excludeVM(rcpu.ptrProperty().get());
-                        System.out.println("Excluded VM " + rcpu.ptrProperty().get());
-                        currentVM = null;
-                    }
+                    do {
+                        outcome = currentVM.getValue().executeCommand(currentVM.getKey(), rcpu, stdinStatus, stdout);
+                        remapParameters(cpumaster, vmmaster); // update values after call
+                        if (outcome == 0){ // HALT - VM has finished its programme
+                            System.out.println("HALT was reached by this VM");
+                            state = State.SWITCH_VM;
+                            excludeVM(rcpu.ptrProperty().get());
+                            String temp = rcpu.ptrProperty().get();
+                            for (Process p : procList){
+                                if (p.getName().equals("VirtualMachine" + rcpu.ptrProperty().get())){
+                                    procList.remove(p);
+                                    rcpu.ptrProperty().setValue("0");
+                                    rcpu.siProperty().setValue("0");
+                                    rcpu.piProperty().setValue("0");
+                                    rcpu.mdProperty().setValue("0");
+                                    rcpu.tmrProperty().setValue("a");
+                                    currentVM = new Pair(new VirtualCPU(), new VirtualMachine()); // null values
+                                    remapParameters(cpumaster, vmmaster);
+                                    currentVM = null;
+                                    break;
+                                }
+                            }
+                            System.out.println("Excluded VM " + temp);
+                            currentVM = null;
+                            return;
+                        }
+                    } while(continuous);
                 }
                 break;
                 
@@ -59,19 +79,18 @@ public class Scheduler {
                         System.out.println("Switching to machine PTR: " + p.getName().substring(14));
                         currentVM = (Pair<VirtualCPU, VirtualMachine>)allVMs.get(p.getName().substring(14));
                         state = State.EXECUTE_VM;
+                        rcpu.ptrProperty().setValue(p.getName().substring(14));
                         remapParameters(cpumaster, vmmaster);
+                        return;
                     }
-                    else {
-                        System.out.println("Cannot find other VMs to execute");
-                    }
-                    // no virtual machines - do something else instead
                 }
+                System.out.println("Cannot find other VMs to execute");
                 break;
         }
     }
     
     public void remapParameters(VirtualCPU cpumaster, VirtualMachine vmmaster){
-        System.out.println("Remapping VMEM memory to VM now");
+        //System.out.println("Remapping VMEM memory to VM now");
         for (int i = 0; i < 16; ++i){
             for (int j = 0; j < 16; ++j){
                 //vmmaster.setVirtualWordProperty(i, j, currentVM.getValue().memoryProperty(i, j));
@@ -79,24 +98,13 @@ public class Scheduler {
             }
         }
         
-        System.out.println("Remapping VCPU to VM now");
+        //System.out.println("Remapping VCPU to VM now");
         //cpumaster.setAll(currentVM.getKey().pcProperty(), currentVM.getKey().sfProperty(),
         //                 currentVM.getKey().axProperty(), currentVM.getKey().bxProperty());
         cpumaster.pcProperty().setValue(currentVM.getKey().pcProperty().getValue());
         cpumaster.sfProperty().setValue(currentVM.getKey().sfProperty().getValue());
         cpumaster.axProperty().setValue(currentVM.getKey().axProperty().getValue());
         cpumaster.bxProperty().setValue(currentVM.getKey().bxProperty().getValue());
-    }
-    
-    public int executeCommand(RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException{
-        int outcome;
-        while(true){
-            outcome = currentVM.getValue().executeCommand(currentVM.getKey(), rcpu, stdinStatus, stdout);
-            if (outcome == 0){ // HALT
-                state = State.SWITCH_VM;
-                return 0;
-            }
-        }
     }
     
     public void includeVM(String ptr, Pair<VirtualCPU, VirtualMachine> vm){
