@@ -50,7 +50,7 @@ public class VirtualMachine {
     
     private boolean finaliseSHL = false;
     private boolean finaliseSHU = false;
-    private int nextSHword = -1;
+    public int nextSHword = -1;
     
     private boolean shrNeedsStart = false;
     private boolean shwNeedsStart = false;

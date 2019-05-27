@@ -434,7 +434,7 @@ public class InteractiveModelOS extends Application {
                         }
                     }
                     
-                    for (Resource r : sch.resList){
+                    /*for (Resource r : sch.resList){
                         if (r.getName().equals("InputRequest")){
                             //r.setFreed("AllocateVM");
                             //r.setOwned("JobGovernor" + rm.getLastPTR());
@@ -443,7 +443,7 @@ public class InteractiveModelOS extends Application {
                             r.setWP(tmp);
                             break;
                         }
-                    }
+                    }*/
                     
                     for (Resource r : sch.resList){
                         if (r.getName().equals("UserInput")){
@@ -456,11 +456,31 @@ public class InteractiveModelOS extends Application {
                         }
                     }
                     
+                    for (Resource r : sch.resList){
+                        if (r.getName().equals("UserOutput")){
+                            //r.setFreed("AllocateVM");
+                            //r.setOwned("JobGovernor" + rm.getLastPTR());
+                            tmp = r.getWP();
+                            tmp.add("JobGovernor" + rm.getLastPTR());
+                            r.setWP(tmp);
+                            break;
+                        }
+                    }
+                    
+                    Process shm = new Process("ManageSHM" + rm.getLastPTR());
+                    shm.setParent("JobGovernor" + rm.getLastPTR());
+                    shm.setStatus("BLOCKED");
+                    shm.setWR("SHMControl");
+                    ArrayList<String> res = shm.getOwnedRs();
+                    res.add("SHMCEnd");
+                    shm.setOwnedRs(res);
+                    sch.procList.add(shm);
+                    
                     vcpu.sfProperty().setValue("0");
                     vcpu.axProperty().setValue("0");
                     vcpu.bxProperty().setValue("0");
 
-                    VM virtualmachine = new VM("VirtualMachine" + rm.getLastPTR());
+                    Process /*VM*/ virtualmachine = new Process("VirtualMachine" + rm.getLastPTR());
                     virtualmachine.setParent("JobGovernor" + rm.getLastPTR());
                     virtualmachine.setStatus("READY_STOPPED");
                     sch.procList.add(virtualmachine);
@@ -818,6 +838,19 @@ public class InteractiveModelOS extends Application {
         idata.setChildren(temp);
         sch.procList.add(idata);
         
+        Process odata = new Process("OData");
+        odata.setStatus("BLOCKED");
+        odata.setWR("OutputRequest");
+        odata.setParent("StartStop");
+        temp = odata.getCreatedRs();
+        odata.setCreatedRs(temp);
+        temp = odata.getOwnedRs();
+        temp.add("UserOutput");
+        odata.setOwnedRs(temp);
+        temp = odata.getChildren();
+        odata.setChildren(temp);
+        sch.procList.add(odata);
+        
         Process loader = new Process("Loader");
         loader.setStatus("BLOCKED");
         loader.setWR("TaskProgrammeInMemory");
@@ -903,6 +936,15 @@ public class InteractiveModelOS extends Application {
         mosend.setWP(temp);
         sch.resList.add(mosend);
         
+        Resource shared = new Resource("SharedMemory");
+        shared.setCreator("StartStop");
+        shared.setFreed("-");
+        shared.setOwned("Potentially owned by multiple JGs");
+        //temp = new ArrayList<>();
+        //temp.add("StartStop");
+        //shared.setWP(temp);
+        sch.resList.add(shared);
+        
         Resource uin = new Resource("UserInput");
         uin.setCreator("StartStop");
         uin.setFreed("-");
@@ -911,6 +953,15 @@ public class InteractiveModelOS extends Application {
         //temp.add("StartStop");
         //mosend.setWP(temp);
         sch.resList.add(uin);
+        
+        Resource uout = new Resource("UserOutput");
+        uout.setCreator("StartStop");
+        uout.setFreed("-");
+        uout.setOwned("OData");
+        //temp = new ArrayList<>();
+        //temp.add("StartStop");
+        //mosend.setWP(temp);
+        sch.resList.add(uout);
         
         Resource inreq = new Resource("InputRequest");
         inreq.setCreator("StartStop");
@@ -921,6 +972,15 @@ public class InteractiveModelOS extends Application {
         inreq.setWP(temp);
         sch.resList.add(inreq);
         
+        Resource oureq = new Resource("OutputRequest");
+        oureq.setCreator("StartStop");
+        oureq.setFreed("-");
+        oureq.setOwned("-");
+        temp = new ArrayList<>();
+        temp.add("OData");
+        oureq.setWP(temp);
+        sch.resList.add(oureq);
+        
         Resource interrupt = new Resource("Interrupt");
         interrupt.setCreator("StartStop");
         interrupt.setFreed("-");
@@ -929,6 +989,15 @@ public class InteractiveModelOS extends Application {
         temp.add("Interrupt");
         interrupt.setWP(temp);
         sch.resList.add(interrupt);
+        
+        Resource shmc = new Resource("SHMControl");
+        shmc.setCreator("StartStop");
+        shmc.setFreed("-");
+        shmc.setOwned("-");
+        //temp = new ArrayList<>();
+        //temp.add("Interrupt");
+        //interrupt.setWP(temp);
+        sch.resList.add(shmc);
         
         Resource uiload = new Resource("UILoad");
         uiload.setCreator("StartStop");

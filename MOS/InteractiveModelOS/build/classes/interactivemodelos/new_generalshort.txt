@@ -1,0 +1,20 @@
+DATA
+5 w "Iveskite skaiciu:", 0
+5 w "Gautas rezultatas:", 0
+2 w "Lyginis", 0
+3 w "Nelyginis", 0
+1 w 7FFFFFFF
+CODE 10
+WW04
+RW0F
+MOV BX0F
+MOVC00000002
+MOD BXAX
+MOVC00000000
+WW09
+CMP AXBX
+JEQL +02
+WW0C
+HALT
+WW0A
+HALT

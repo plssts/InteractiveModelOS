@@ -19,6 +19,11 @@ public class Resource {
     protected String ownedBy;
     
     protected int ownedBlocks = 0;
+    public String[] shmem;
+    
+    public void setShmem(String[] arr){
+        shmem = arr;
+    }
     
     public Resource(String externalName){
         this.externalName = externalName;
@@ -78,6 +83,14 @@ public class Resource {
         
         if (externalName.equals("VirtualMemory")){
             output = output + "\nCurrently there are " + ownedBlocks + " memory blocks used.";
+        }
+        
+        if (externalName.equals("SharedMemory")){
+            output += "\n";
+            for (String s: shmem){
+                output = output + s + "\n";
+            }
+            //output = output + "\nCurrently there are " + ownedBlocks + " memory blocks used.";
         }
         
         return output;

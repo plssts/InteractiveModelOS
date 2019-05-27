@@ -25,6 +25,7 @@ public class RealCPU {
     private final SimpleStringProperty SHM;
     
     private final SharedMemoryTracker smt;
+    private String[] ptrLocks;
     
     public RealCPU(SharedMemoryTracker smt){
         PTR = new SimpleStringProperty("0");
@@ -41,6 +42,18 @@ public class RealCPU {
         SI = new SimpleStringProperty("0");
         
         this.smt = smt;
+        ptrLocks = new String[16];
+        for (int i = 0; i < 16; ++i){
+            ptrLocks[i] = "";
+        }
+    }
+    
+    public String getLock(int word){
+        return ptrLocks[word];
+    }
+    
+    public void setLock(int word, String ptr){
+        ptrLocks[word] = ptr;
     }
     
     public void setPTR(int value){

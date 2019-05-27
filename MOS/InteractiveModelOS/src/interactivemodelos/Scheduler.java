@@ -24,6 +24,7 @@ public class Scheduler {
     //RealMachine rm;
     
     Map allVMs;
+    Map wordRequests;
     //Map vmsRegisters;
     Pair<VirtualCPU, VirtualMachine> currentVM;
     enum State {
@@ -32,12 +33,13 @@ public class Scheduler {
     
     private State state;
     
-    private boolean freeTIM = true;
+    //private boolean[] startedSHM = {false, false, false};
     private boolean goJCL = false;
     private boolean tofreeJCL = true;
     
     public Scheduler(){
         allVMs = new HashMap();
+        wordRequests = new HashMap();
         //vmsRegisters = new HashMap();
         procList = FXCollections.<Process>observableArrayList();
         resList = FXCollections.<Resource>observableArrayList();
@@ -64,6 +66,10 @@ public class Scheduler {
             case EXECUTE_VM:
                 if (currentVM != null){
                     do {
+                        if (wordRequests.containsKey(rcpu.ptrProperty().get())){
+                            state = State.SHM_LOCK;
+                            return 100;
+                        }
                         outcome = currentVM.getValue().executeCommand(currentVM.getKey(), rcpu, stdinStatus, stdout);
                         remapParameters(cpumaster, vmmaster); // update values after call
                         if (outcome == 0 || outcome == 2){ // HALT - VM has finished its programme
@@ -119,6 +125,16 @@ public class Scheduler {
                                 }
                             }
                             
+                            for (Resource rsrc : resList){
+                                if (rsrc.getName().equals("SHMControl")){
+                                    ArrayList<String> arr = rsrc.getWP();
+                                    arr.remove("JobGovernor" + temp);
+                                    rsrc.setFreed("JobGovernor" + temp);
+                                    rsrc.setWP(arr);
+                                    break;
+                                }
+                            }
+                            
                             System.out.println("Excluded VM " + temp);
                             currentVM = null;
                             return Integer.parseInt(temp, 16);
@@ -148,8 +164,8 @@ public class Scheduler {
                         }
                         
                         if (outcome == 4){
-                            switch(rcpu.siProperty().get()){
-                                case "1": // RW - input from user
+                            //switch(rcpu.siProperty().get()){
+                                //case "1": // RW - input from user
                                     state = State.INTERRUPT_ACTIVATE;
                                     for (Process p : procList){
                                         if (p.getName().equals("VirtualMachine" + rcpu.ptrProperty().get())){
@@ -176,9 +192,32 @@ public class Scheduler {
                                     }
                                     return 100;
                                     
-                                case "2": // WW - output from user
+                                /*case "2": // WW - output from user
+                                    state = State.INTERRUPT_ACTIVATE;
+                                    for (Process p : procList){
+                                        if (p.getName().equals("VirtualMachine" + rcpu.ptrProperty().get())){
+                                            p.setStatus("READY_STOPPED");
+                                            break;
+                                        }
+                                    }
                                     
-                                    break;
+                                    for (Resource r : resList){
+                                        if (r.getName().equals("Interrupt")){
+                                            r.setFreed("VirtualMachine" + rcpu.ptrProperty().get());
+                                            ArrayList<String> temp = r.getWP();
+                                            temp.remove("Interrupt");
+                                            r.setOwned("Interrupt");
+                                            break;
+                                        }
+                                    }
+                                    
+                                    for (Process p : procList){
+                                        if (p.getName().equals("Interrupt")){
+                                            p.setStatus("READY");
+                                            break;
+                                        }
+                                    }
+                                    return 100;
                                     
                                 case "5": // SHL - memory lock
                                     
@@ -186,9 +225,10 @@ public class Scheduler {
                                     
                                 case "6": // SHU - memory unlock
                                     
-                                    break;
+                                    break;*/
+                                //return 100;
                             }
-                        }
+                        //}
                     } while(continuous);
                 }
                 break;
@@ -234,26 +274,206 @@ public class Scheduler {
                     }
                     
                     for (Resource r : resList){
-                    if (r.getName().equals("UserInput")){
-                        //r.setFreed("IData");
-                        //r.setOwned("JobGovernor" + rcpu.ptrProperty().get());
-                        ArrayList<String> temp = r.getWP();
-                        temp.remove("JobGovernor" + rcpu.ptrProperty().get());
-                        r.setWP(temp);
-                        break;
+                        if (r.getName().equals("UserInput")){
+                            //r.setFreed("IData");
+                            //r.setOwned("JobGovernor" + rcpu.ptrProperty().get());
+                            ArrayList<String> temp = r.getWP();
+                            temp.remove("JobGovernor" + rcpu.ptrProperty().get());
+                            r.setWP(temp);
+                            break;
+                        }
                     }
-                }
                 }
                 else if (rcpu.siProperty().get().equals("2")){
                     state = State.ACTIVATE_ODATA;
+                    for (Process p : procList){
+                        if (p.getName().equals("JobGovernor" + rcpu.ptrProperty().get())){
+                            p.setStatus("BLOCKED");
+                            p.setWR("UserOutput");
+                            ArrayList<String> temp = p.getOwnedRs();
+                            temp.remove("OutputRequest");
+                            p.setOwnedRs(temp);
+                            break;
+                        }
+                    }
+                    
+                    for (Resource r : resList){
+                        if (r.getName().equals("OutputRequest")){
+                            r.setFreed("JobGovernor" + rcpu.ptrProperty().get());
+                            r.setOwned("OData");
+                            ArrayList<String> temp = r.getWP();
+                            temp.remove("OData");
+                            r.setWP(temp);
+                            break;
+                        }
+                    }
+                    
+                    for (Resource r : resList){
+                        if (r.getName().equals("UserOutput")){
+                            //r.setFreed("IData");
+                            //r.setOwned("JobGovernor" + rcpu.ptrProperty().get());
+                            ArrayList<String> temp = r.getWP();
+                            temp.remove("JobGovernor" + rcpu.ptrProperty().get());
+                            r.setWP(temp);
+                            break;
+                        }
+                    }
                 }
                 else if (rcpu.siProperty().get().equals("5")){
                     state = State.SHM_LOCK;
+                    for (Resource r : resList){
+                        if (r.getName().equals("SHMControl")){
+                            r.setFreed("JobGovernor" + rcpu.ptrProperty().get());
+                            r.setOwned("ManageSHM" + rcpu.ptrProperty().get());
+                            ArrayList<String> temp = r.getWP();
+                            temp.remove("ManageSHM" + rcpu.ptrProperty().get());
+                            r.setWP(temp);
+                            break;
+                        }
+                    }
                 }
                 else if (rcpu.siProperty().get().equals("6")){
                     state = State.SHM_UNLOCK;
+                    for (Resource r : resList){
+                        if (r.getName().equals("SHMControl")){
+                            r.setFreed("JobGovernor" + rcpu.ptrProperty().get());
+                            r.setOwned("ManageSHM" + rcpu.ptrProperty().get());
+                            ArrayList<String> temp = r.getWP();
+                            temp.remove("ManageSHM" + rcpu.ptrProperty().get());
+                            r.setWP(temp);
+                            break;
+                        }
+                    }
                 }
                 return 100;
+                
+            case SHM_LOCK:
+                //if (!startedSHM){
+                for (Process p : procList){
+                    if (p.getName().equals("ManageSHM" + rcpu.ptrProperty().get())){
+                        p.setStatus("RUNNING");
+                        p.setWR("-");
+                        ArrayList<String> temp = p.getOwnedRs();
+                        temp.add("SHMControl");
+                        p.setOwnedRs(temp);
+                        break;
+                    }
+                }
+
+                for (Process p : procList){
+                    if (p.getName().equals("JobGovernor" + rcpu.ptrProperty().get())){
+                        p.setStatus("BLOCKED");
+                        p.setWR("SHMCEnd");
+                        ArrayList<String> temp = p.getOwnedRs();
+                        temp.remove("SHMControl");
+                        p.setOwnedRs(temp);
+                        break;
+                    }
+                }
+
+                for (Process p : procList){
+                    if (p.getName().equals("JobGovernor" + rcpu.ptrProperty().get())){
+                        p.setStatus("BLOCKED");
+                        p.setWR("SHMCEnd");
+                        ArrayList<String> temp = p.getOwnedRs();
+                        temp.remove("SHMControl");
+                        p.setOwnedRs(temp);
+                        break;
+                    }
+                }
+
+                for (Process p : procList){
+                    if (p.getName().equals("VirtualMachine" + rcpu.ptrProperty().get())){
+                        Process temp = p;
+                        procList.remove(p);
+                        temp.setStatus("READY_STOPPED");
+                        procList.add(temp);
+                        //p.setWR("SHMCEnd");
+                        //ArrayList<String> temp = p.getOwnedRs();
+                        //temp.remove("SHMControl");
+                        //p.setOwnedRs(temp);
+                        break;
+                    }
+                }
+                    //startedSHM = true;
+                    //return 100;
+                //}
+                
+                int word = currentVM.getValue().nextSHword;
+                if (!wordRequests.containsKey(rcpu.ptrProperty().get())){
+                    wordRequests.put(rcpu.ptrProperty().get(), word);
+                }
+                
+                if (rcpu.getLock((Integer)wordRequests.get(rcpu.ptrProperty().get())).equals("")){
+                    rcpu.setLock(word, rcpu.ptrProperty().get());
+                    for (Resource r : resList){
+                        if (r.getName().equals("SharedMemory")){
+                            String[] temp = r.shmem;
+                            temp[word] = rcpu.ptrProperty().get();
+                            r.setShmem(temp);
+                            break;
+                        }
+                    }
+                    wordRequests.remove(rcpu.ptrProperty().get());
+                    state = State.EXECUTE_VM;
+                    
+                    for (Process p : procList){
+                        if (p.getName().equals("ManageSHM" + rcpu.ptrProperty().get())){
+                            p.setStatus("BLOCKED");
+                            p.setWR("SHMControl");
+                            ArrayList<String> temp = p.getOwnedRs();
+                            temp.remove("SHMControl");
+                            p.setOwnedRs(temp);
+                            break;
+                        }
+                    }
+                    
+                    for (Process p : procList){
+                        if (p.getName().equals("VirtualMachine" + rcpu.ptrProperty().get())){
+                            p.setStatus("RUNNING");
+                            p.setWR("-");
+                            //ArrayList<String> temp = p.getOwnedRs();
+                            //temp.add("SHMControl");
+                            //p.setOwnedRs(temp);
+                            break;
+                        }
+                    }
+                    
+                    for (Process p : procList){
+                        if (p.getName().equals("JobGovernor" + rcpu.ptrProperty().get())){
+                            p.setStatus("BLOCKED");
+                            p.setWR("FromInterrupt");
+                            ArrayList<String> temp = p.getOwnedRs();
+                            temp.remove("SHMControl");
+                            temp.add("SHMCEnd");
+                            p.setOwnedRs(temp);
+                            break;
+                        }
+                    }
+                    
+                    return 100;
+                }
+                else {
+                    System.out.println("Someone has already locked this word - waiting");
+                    for (Process p : procList){
+                        if (p.getName().equals("ManageSHM" + rcpu.ptrProperty().get())){
+                            p.setStatus("BLOCKED");
+                            p.setWR("SharedMemory");
+                            //ArrayList<String> temp = p.getOwnedRs();
+                            //temp.add("SHMControl");
+                            //p.setOwnedRs(temp);
+                            break;
+                        }
+                    }
+                    state = State.SWITCH_VM;
+                    //wordRequests.put(rcpu.ptrProperty().get(), word);
+                    return 100;
+                }
+                //break;
+                
+            case SHM_UNLOCK:
+                
+                break;
                 
             case ACTIVATE_IDATA:
                 System.out.println("IData is running and is blocked after 'assumed' input");
@@ -325,6 +545,76 @@ public class Scheduler {
                 System.out.println("Will resume execution");
                 break;
                 
+            case ACTIVATE_ODATA:
+                System.out.println("IData is running and is blocked after 'assumed' input");
+                for (Process p : procList){
+                    if (p.getName().equals("OData")){ // Assuming AFTER input
+                        p.setStatus("BLOCKED");
+                        p.setWR("OutputRequest");
+                        //ArrayList<String> temp = p.getOwnedRs();
+                        //temp.add("InputRequest");
+                        //p.setOwnedRs(temp);
+                        break;
+                    }
+                }
+                
+                for (Process p : procList){
+                    if (p.getName().equals("JobGovernor" + rcpu.ptrProperty().get())){ // Assuming AFTER input
+                        p.setStatus("BLOCKED");
+                        p.setWR("FromInterrupt");
+                        //ArrayList<String> temp = p.getOwnedRs();
+                        //temp.add("InputRequest");
+                        //p.setOwnedRs(temp);
+                        break;
+                    }
+                }
+                
+                for (Resource r : resList){
+                    if (r.getName().equals("OutputRequest")){
+                        r.setFreed("JobGovernor" + rcpu.ptrProperty().get());
+                        r.setOwned("-");
+                        ArrayList<String> temp = r.getWP();
+                        temp.add("OData");
+                        r.setWP(temp);
+                        break;
+                    }
+                }
+                
+                for (Resource r : resList){
+                    if (r.getName().equals("UserOutput")){
+                        r.setFreed("OData");
+                        r.setOwned("JobGovernor" + rcpu.ptrProperty().get());
+                        ArrayList<String> temp = r.getWP();
+                        temp.add("JobGovernor" + rcpu.ptrProperty().get());
+                        r.setWP(temp);
+                        break;
+                    }
+                }
+                
+                for (Process p : procList){
+                    if (p.getName().equals("VirtualMachine" + rcpu.ptrProperty().get())){
+                        Process copy = p;
+                        procList.remove(p);
+                        copy.setStatus("RUNNING");
+                        procList.add(copy);
+                        break;
+                    }
+                }
+                
+                for (Process p : procList){
+                    if (p.getName().equals("Interrupt")){
+                        Process copy = p;
+                        procList.remove(p);
+                        copy.setStatus("BLOCKED");
+                        procList.add(copy);
+                        break;
+                    }
+                }
+                
+                state = State.EXECUTE_VM;
+                System.out.println("Will resume execution");
+                break;
+                
             case SWITCH_VM:
                 for (Process p : procList){
                     if (p.getName().startsWith("VirtualMachine")){
@@ -364,6 +654,16 @@ public class Scheduler {
                                 r.setOwned(p.getName());
                                 //tp.add("Main");
                                 //r.setWP(tp);
+                                break;
+                            }
+                        }
+                        
+                        for (Resource rsrc : resList){
+                            if (rsrc.getName().equals("SHMControl")){
+                                ArrayList<String> arr = rsrc.getWP();
+                                arr.add("JobGovernor" + p.getName().substring(14));
+                                rsrc.setOwned("JobGovernor" + p.getName().substring(14));
+                                rsrc.setWP(arr);
                                 break;
                             }
                         }
