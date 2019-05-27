@@ -149,6 +149,7 @@ public class VirtualMachine {
     // Returns 0 if current VM has halted and can be removed
     // Returns 2 if current VM encountered an interrupt (not possible to recover)
     // Returns 3 if the timer has depleted and we needa new VM
+    // Returns 4 if SI interrupt needs processing
     public int executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
         if (TMRstep){
             int outcome = rcpu.decrTMRandCheck(nextTMRdecr);
@@ -178,10 +179,13 @@ public class VirtualMachine {
                             message = "Using shared memory without locking it";
                             break;
                     }
-                    throw new IOException("[INT] " + message + " [INT]");
+                    stdout.setText("[INT] " + message + " [INT]");
+                    clearBooleans();
+                    return 2;
                 }
                 clearBooleans();
-                return 2;
+                //nonCommandStep = false;
+                return 1;
                 
             } 
             if (setModeTo1){
@@ -205,7 +209,7 @@ public class VirtualMachine {
             if (!nextSIval.isEmpty()){
                 rcpu.siProperty().setValue(nextSIval);
                 nextSIval = "";
-                return 1;
+                return rcpu.siProperty().get().equals("0")? 1 : 4;
                 
             }
             if (wwNeedsOpening){
@@ -388,16 +392,19 @@ public class VirtualMachine {
                     nextSIval = "1";
                     nonCommandStep = true;
                     setModeTo1 = true;
+                    System.out.println("Set SI");
                     return 1;
                 }
 
                 if (!rwChannelOpened && !contentProcessed){
                     rwNeedsOpening = true;
                     nonCommandStep = true;
+                    System.out.println("Opening");
                     return 1;
                 }
 
                 if (!contentProcessed){
+                    System.out.println("Processing content");
                     int destBlock = -1, destWord = -1;
                     destBlock = Integer.parseInt(position.substring(2, 3), 16);
                     destWord = Integer.parseInt(position.substring(3, 4), 16);

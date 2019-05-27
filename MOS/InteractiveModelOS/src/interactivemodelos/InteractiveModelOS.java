@@ -434,6 +434,28 @@ public class InteractiveModelOS extends Application {
                         }
                     }
                     
+                    for (Resource r : sch.resList){
+                        if (r.getName().equals("InputRequest")){
+                            //r.setFreed("AllocateVM");
+                            //r.setOwned("JobGovernor" + rm.getLastPTR());
+                            tmp = r.getWP();
+                            //tmp.add("IData");
+                            r.setWP(tmp);
+                            break;
+                        }
+                    }
+                    
+                    for (Resource r : sch.resList){
+                        if (r.getName().equals("UserInput")){
+                            //r.setFreed("AllocateVM");
+                            //r.setOwned("JobGovernor" + rm.getLastPTR());
+                            tmp = r.getWP();
+                            tmp.add("JobGovernor" + rm.getLastPTR());
+                            r.setWP(tmp);
+                            break;
+                        }
+                    }
+                    
                     vcpu.sfProperty().setValue("0");
                     vcpu.axProperty().setValue("0");
                     vcpu.bxProperty().setValue("0");
@@ -783,6 +805,19 @@ public class InteractiveModelOS extends Application {
         jcl.setChildren(temp);
         sch.procList.add(jcl);
         
+        Process idata = new Process("IData");
+        idata.setStatus("BLOCKED");
+        idata.setWR("InputRequest");
+        idata.setParent("StartStop");
+        temp = idata.getCreatedRs();
+        idata.setCreatedRs(temp);
+        temp = idata.getOwnedRs();
+        temp.add("UserInput");
+        idata.setOwnedRs(temp);
+        temp = idata.getChildren();
+        idata.setChildren(temp);
+        sch.procList.add(idata);
+        
         Process loader = new Process("Loader");
         loader.setStatus("BLOCKED");
         loader.setWR("TaskProgrammeInMemory");
@@ -867,6 +902,24 @@ public class InteractiveModelOS extends Application {
         temp.add("StartStop");
         mosend.setWP(temp);
         sch.resList.add(mosend);
+        
+        Resource uin = new Resource("UserInput");
+        uin.setCreator("StartStop");
+        uin.setFreed("-");
+        uin.setOwned("IData");
+        //temp = new ArrayList<>();
+        //temp.add("StartStop");
+        //mosend.setWP(temp);
+        sch.resList.add(uin);
+        
+        Resource inreq = new Resource("InputRequest");
+        inreq.setCreator("StartStop");
+        inreq.setFreed("-");
+        inreq.setOwned("-");
+        temp = new ArrayList<>();
+        temp.add("IData");
+        inreq.setWP(temp);
+        sch.resList.add(inreq);
         
         Resource interrupt = new Resource("Interrupt");
         interrupt.setCreator("StartStop");
