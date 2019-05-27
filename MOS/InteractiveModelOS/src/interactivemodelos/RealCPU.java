@@ -44,7 +44,7 @@ public class RealCPU {
         this.smt = smt;
         ptrLocks = new String[16];
         for (int i = 0; i < 16; ++i){
-            ptrLocks[i] = "";
+            ptrLocks[i] = " ";
         }
     }
     

@@ -6,6 +6,8 @@ package interactivemodelos;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.Label;
@@ -28,7 +30,7 @@ public class VirtualMachine {
     private boolean setModeTo1 = false;
     private boolean throwableInt = false;
     private String nextPIval = "";
-    private String nextSIval = "";
+    public String nextSIval = "";
     
     private boolean wwChannelOpened = false;
     private boolean wwNeedsOpening = false;
@@ -59,6 +61,8 @@ public class VirtualMachine {
     
     private boolean TMRstep = false;
     private int nextTMRdecr = 0;
+    
+    public boolean alreadyLocked = false;
     
     public VirtualMachine(){ 
         // Initial memory loading
@@ -137,6 +141,7 @@ public class VirtualMachine {
         finaliseSHW = false;
         TMRstep = false;
         nextTMRdecr = 0;
+        alreadyLocked = false;
     }
     
     public void reset(){
@@ -150,7 +155,7 @@ public class VirtualMachine {
     // Returns 2 if current VM encountered an interrupt (not possible to recover)
     // Returns 3 if the timer has depleted and we needa new VM
     // Returns 4 if SI interrupt needs processing
-    public int executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout) throws IOException, NumberFormatException{
+    public int executeCommand(VirtualCPU vcpu, RealCPU rcpu, Label stdinStatus, TextField stdout, Map freeReq) throws IOException, NumberFormatException{
         if (TMRstep){
             int outcome = rcpu.decrTMRandCheck(nextTMRdecr);
             nextTMRdecr = 0;
@@ -206,9 +211,15 @@ public class VirtualMachine {
                 return 1;
                 
             } 
+            System.out.println("Next SI: " + nextSIval);
             if (!nextSIval.isEmpty()){
                 rcpu.siProperty().setValue(nextSIval);
+                /*if (rcpu.siProperty().get().equals("6") && !alreadyLocked){
+                    freeReq.put(rcpu.ptrProperty().get(), nextSHword);
+                    alreadyLocked = true;
+                }*/
                 nextSIval = "";
+                System.out.println("Outcome is going to be " + (rcpu.siProperty().get().equals("0")? "1" : "4"));
                 return rcpu.siProperty().get().equals("0")? 1 : 4;
                 
             }
@@ -482,9 +493,15 @@ public class VirtualMachine {
             if (position.startsWith("SHU")){
                 int id = Integer.parseInt(position.substring(3, 4), 16);
                 nextSHword = id;
+                /*if (forceput){
+                    freeReq.put(rcpu.ptrProperty().get(), nextSHword);
+                    forceput = false;
+                }*/
                 
                 if (rcpu.siProperty().get().equals("0")){
+                    System.out.println("Next SI is going to be 6");
                     nextSIval = "6";
+                    freeReq.put(rcpu.ptrProperty().get(), nextSHword);
                     nonCommandStep = true;
                     setModeTo1 = true;
                     return 1;
@@ -493,6 +510,7 @@ public class VirtualMachine {
                 if (!shmUnlocked){
                     shmNeedsUnlocking = true;
                     nonCommandStep = true;
+                    //freeReq.put(rcpu.ptrProperty().get(), nextSHword);
                     return 1;
                 }
                 
@@ -503,6 +521,7 @@ public class VirtualMachine {
                 TMRstep = true;
                 nonCommandStep = true;
                 nextSIval = "0";
+                freeReq.remove(rcpu.ptrProperty().get());
                 return 1;
 
             }

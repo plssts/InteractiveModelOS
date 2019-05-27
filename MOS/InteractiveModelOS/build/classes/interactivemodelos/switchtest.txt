@@ -1,5 +1,0 @@
-DATA
-1 w "Hi", 0
-CODE 10
-WW00
-HALT

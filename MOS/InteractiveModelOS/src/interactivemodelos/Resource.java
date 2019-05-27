@@ -19,7 +19,13 @@ public class Resource {
     protected String ownedBy;
     
     protected int ownedBlocks = 0;
-    public String[] shmem;
+    public String[] shmem = new String[16];
+    
+    public Resource(){
+        for (int i = 0; i < 16; ++i){
+            shmem[i] = " ";
+        }
+    }
     
     public void setShmem(String[] arr){
         shmem = arr;
