@@ -1,15 +1,9 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package interactivemodelos;
 
 import java.util.ArrayList;
 
 /**
- *
- * @author LAPTOPELIS
+ * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
  */
 public class Process {
     protected String externalName;

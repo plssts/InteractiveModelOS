@@ -100,7 +100,6 @@ public class RealMachine {
         allBlc.add(pagingTableBlock);
         sch.includeVM(ptrValue, new Pair(cpu, vm));
         lastAllocPTR = ptrValue;
-        //System.out.println("\tVirtual blocks mapped to real blocks");
         return true;
     }
     

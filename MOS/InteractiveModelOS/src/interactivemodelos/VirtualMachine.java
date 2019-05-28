@@ -189,7 +189,6 @@ public class VirtualMachine {
                     return 2;
                 }
                 clearBooleans();
-                //nonCommandStep = false;
                 return 1;
                 
             } 
@@ -214,10 +213,6 @@ public class VirtualMachine {
             System.out.println("Next SI: " + nextSIval);
             if (!nextSIval.isEmpty()){
                 rcpu.siProperty().setValue(nextSIval);
-                /*if (rcpu.siProperty().get().equals("6") && !alreadyLocked){
-                    freeReq.put(rcpu.ptrProperty().get(), nextSHword);
-                    alreadyLocked = true;
-                }*/
                 nextSIval = "";
                 System.out.println("Outcome is going to be " + (rcpu.siProperty().get().equals("0")? "1" : "4"));
                 return rcpu.siProperty().get().equals("0")? 1 : 4;
@@ -493,10 +488,6 @@ public class VirtualMachine {
             if (position.startsWith("SHU")){
                 int id = Integer.parseInt(position.substring(3, 4), 16);
                 nextSHword = id;
-                /*if (forceput){
-                    freeReq.put(rcpu.ptrProperty().get(), nextSHword);
-                    forceput = false;
-                }*/
                 
                 if (rcpu.siProperty().get().equals("0")){
                     System.out.println("Next SI is going to be 6");
@@ -510,7 +501,6 @@ public class VirtualMachine {
                 if (!shmUnlocked){
                     shmNeedsUnlocking = true;
                     nonCommandStep = true;
-                    //freeReq.put(rcpu.ptrProperty().get(), nextSHword);
                     return 1;
                 }
                 

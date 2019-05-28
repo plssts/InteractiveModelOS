@@ -3,20 +3,12 @@ Holds the GUI. Also starts the JavaFX main stage.
 */
 package interactivemodelos;
 
-import com.sun.jmx.mbeanserver.Util;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -40,12 +32,8 @@ import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import javafx.stage.WindowEvent;
 import javafx.util.Pair;
 import process.StartStop;
-import process.VM;
-import resource.VirtualMemory;
 
 /**
  * @author Paulius Staisiunas, Computer Science 3 yr., 3 gr.
@@ -81,8 +69,6 @@ public class InteractiveModelOS extends Application {
         stdinStatus.setTextFill(Color.DARKRED);
         Label stdoutLabel = new Label("Output device");
         stdoutLabel.setTextFill(Color.RED);
-        
-        //rm.loadVirtualMachine(rcpu, vm);
         
         // RM memory pane
         GridPane rmMem = new GridPane();
@@ -132,31 +118,6 @@ public class InteractiveModelOS extends Application {
             vmMem.add(blockNum, 17, block);
         }
         
-        /*Button startProg = new Button("Run VM programme");
-        startProg.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                int outcome;
-                try {
-                    if (sch.allVMs.isEmpty()){
-                        System.out.println("There are no VMs to run");
-                        return;
-                    }
-                    try {
-                        sch.step(rcpu, stdinStatus, stdout, vcpuMaster, vmMaster, true);
-                    } catch (java.util.ConcurrentModificationException ex){
-
-                    }
-                } catch (NumberFormatException | IOException ex) {
-                    stdout.setText(ex.getMessage());
-                    System.out.println(ex);
-                }
-            }
-        });*/
-        
-        //boolean initialLoad = true;
-        //boolean nowLoadJG = false;
-        
         Button step = new Button("Step");
         step.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -196,34 +157,10 @@ public class InteractiveModelOS extends Application {
             }
         });
         
-        /*Button reset = new Button("Reset");
-        reset.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                vcpu.pcProperty().setValue(Integer.toHexString(vm.getInitialPC()/16) + Integer.toHexString(vm.getInitialPC()%16));
-                vcpu.sfProperty().setValue("0");
-                vcpu.axProperty().setValue("0");
-                vcpu.bxProperty().setValue("0");
-                rcpu.tmrProperty().setValue("a");
-                rcpu.mdProperty().setValue("0");
-                rcpu.siProperty().setValue("0");
-                rcpu.piProperty().setValue("0");
-                rcpu.shmProperty().setValue("0000000000000000");
-                stdout.setText("");
-                vm.reset();
-            }
-        });*/
-        
-        //File sourceCode;
-        
-        
         Button loadProg = new Button("Load");
-        //sch.addbtn(loadProg);
-        //sch.linkRM(rm);
         loadProg.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                //if (initialLoad){
                 VirtualMachine vm = new VirtualMachine();
                 VirtualCPU vcpu = new VirtualCPU();
 
@@ -242,9 +179,6 @@ public class InteractiveModelOS extends Application {
                 if (sourceCode == null){
                     return;
                 }
-                
-                //sch.setFile(sourceCode);
-                //loadProg.setDisable(true);
                 
                 // TaskInMemory is freed - we read the source code
                 for (Resource r : sch.resList){
@@ -297,8 +231,6 @@ public class InteractiveModelOS extends Application {
                 // TaskInMemory has JCLI as waiting process again
                 for (Resource r : sch.resList){
                     if (r.getName().equals("TaskInMemory")){
-                        //r.setFreed("ReadUI");
-                        //r.setOwned("JobCtrlLangInterpreter");
                         ArrayList<String> tmp = r.getWP();
                         tmp.add("JobCtrlLangInterpreter");
                         r.setWP(tmp);
@@ -345,8 +277,6 @@ public class InteractiveModelOS extends Application {
                 // TaskProgrammeInMemory has Loader in its waiting list
                 for (Resource r : sch.resList){
                     if (r.getName().equals("TaskProgrammeInMemory")){
-                        //r.setFreed("JobCtrlLangInterpreter");
-                        //r.setOwned("Loader");
                         ArrayList<String> tmp = r.getWP();
                         tmp.add("Loader");
                         r.setWP(tmp);
@@ -373,8 +303,6 @@ public class InteractiveModelOS extends Application {
                     jg.setStatus("BLOCKED");
                     jg.setWR("FromInterrupt");
                     jg.setParent("Main");
-                    //ArrayList<String> tmp = jg.getCreatedRs();
-                    //jg.setCreatedRs(tmp);
                     ArrayList<String> tmp = jg.getOwnedRs();
                     tmp.add("VMAllocated");
                     tmp.add("InputRequest");
@@ -392,7 +320,6 @@ public class InteractiveModelOS extends Application {
                         if (p.getName().equals("AllocateVM")){
                             p.setStatus("BLOCKED");
                             p.setWR("VMRequest");
-                            // make allocatevm own some virtual memory
                             break;
                         }
                     }
@@ -400,12 +327,7 @@ public class InteractiveModelOS extends Application {
                     // Some virtual memory is gone
                     for (Resource rsrc : sch.resList){
                         if (rsrc.getName().equals("VirtualMemory")){
-                            //r.setFreed("AllocateVM");
-                            //rsrc.setOwned("JobGovernor" + rm.getLastPTR());
                             rsrc.incrBlocks(17);
-                            //tmp = r.getWP();
-                            //tmp.add("JobCtrlLangInterpreter");
-                            //r.setWP(tmp);
                             break;
                         }
                     }
@@ -415,9 +337,6 @@ public class InteractiveModelOS extends Application {
                         if (r.getName().equals("VMAllocated")){
                             r.setFreed("AllocateVM");
                             r.setOwned("JobGovernor" + rm.getLastPTR());
-                            //tmp = r.getWP();
-                            //tmp.add("JobCtrlLangInterpreter");
-                            //r.setWP(tmp);
                             break;
                         }
                     }
@@ -425,8 +344,6 @@ public class InteractiveModelOS extends Application {
                     // New JG waits for FromInterrupt
                     for (Resource r : sch.resList){
                         if (r.getName().equals("FromInterrupt")){
-                            //r.setFreed("AllocateVM");
-                            //r.setOwned("JobGovernor" + rm.getLastPTR());
                             tmp = r.getWP();
                             tmp.add("JobGovernor" + rm.getLastPTR());
                             r.setWP(tmp);
@@ -434,21 +351,8 @@ public class InteractiveModelOS extends Application {
                         }
                     }
                     
-                    /*for (Resource r : sch.resList){
-                        if (r.getName().equals("InputRequest")){
-                            //r.setFreed("AllocateVM");
-                            //r.setOwned("JobGovernor" + rm.getLastPTR());
-                            tmp = r.getWP();
-                            //tmp.add("IData");
-                            r.setWP(tmp);
-                            break;
-                        }
-                    }*/
-                    
                     for (Resource r : sch.resList){
                         if (r.getName().equals("UserInput")){
-                            //r.setFreed("AllocateVM");
-                            //r.setOwned("JobGovernor" + rm.getLastPTR());
                             tmp = r.getWP();
                             tmp.add("JobGovernor" + rm.getLastPTR());
                             r.setWP(tmp);
@@ -458,8 +362,6 @@ public class InteractiveModelOS extends Application {
                     
                     for (Resource r : sch.resList){
                         if (r.getName().equals("UserOutput")){
-                            //r.setFreed("AllocateVM");
-                            //r.setOwned("JobGovernor" + rm.getLastPTR());
                             tmp = r.getWP();
                             tmp.add("JobGovernor" + rm.getLastPTR());
                             r.setWP(tmp);
@@ -480,7 +382,7 @@ public class InteractiveModelOS extends Application {
                     vcpu.axProperty().setValue("0");
                     vcpu.bxProperty().setValue("0");
 
-                    Process /*VM*/ virtualmachine = new Process("VirtualMachine" + rm.getLastPTR());
+                    Process virtualmachine = new Process("VirtualMachine" + rm.getLastPTR());
                     virtualmachine.setParent("JobGovernor" + rm.getLastPTR());
                     virtualmachine.setStatus("READY_STOPPED");
                     sch.procList.add(virtualmachine);
@@ -497,20 +399,6 @@ public class InteractiveModelOS extends Application {
                     }
                     stdout.setText("There is not enough space for another VM");
                 }
-                //}
-                /*vm.reset();
-                for (int i = 0; i < 16; ++i){
-                    for (int j = 0; j < 16 ; ++j){
-                        vm.setWord(i, j, "0");
-                    }
-                }*/
-                
-
-                //rcpu.tmrProperty().setValue("a");
-                //rcpu.mdProperty().setValue("0");
-                //rcpu.siProperty().setValue("0");
-                //rcpu.piProperty().setValue("0");
-                //rcpu.shmProperty().setValue("0000000000000000");
             }
         });
         
@@ -720,13 +608,8 @@ public class InteractiveModelOS extends Application {
         Label vcpuLabel = new Label("Virtual processor");
         vcpuLabel.setTextFill(Color.RED);
 
-        //rightOrganized.getChildren().add(startProg);
         rightOrganized.getChildren().add(step);
         rightOrganized.getChildren().add(loadProg);
-        //rightOrganized.getChildren().add(reset);
-        
-        // REMOVE AFTER TESTING
-        //rightOrganized.getChildren().add(test);
         
         HBox processors = new HBox();
         processors.setSpacing(10);
@@ -782,10 +665,8 @@ public class InteractiveModelOS extends Application {
         startstop.setWR("MOSEnd");
         startstop.setParent("-");
         ArrayList<String> temp = startstop.getOwnedRs();
-        //temp.add("-");
         startstop.setOwnedRs(temp);
         temp = startstop.getCreatedRs();
-        //temp.add("-");
         startstop.setCreatedRs(temp);
         temp = startstop.getChildren();
         temp.add("ReadUI");
@@ -913,18 +794,12 @@ public class InteractiveModelOS extends Application {
         fi.setCreator("StartStop");
         fi.setFreed("-");
         fi.setOwned("-");
-        //temp = new ArrayList<>();
-        //temp.add("StartStop");
-        //mosend.setWP(temp);
         sch.resList.add(fi);
         
         Resource vm = new Resource("VirtualMemory");
         vm.setCreator("StartStop");
         vm.setFreed("-");
         vm.setOwned("Potentially owned by multiple JGs");
-        //temp = new ArrayList<>();
-        //temp.add("StartStop");
-        //mosend.setWP(temp);
         sch.resList.add(vm);
         
         Resource mosend = new Resource("MOSEnd");
@@ -940,27 +815,18 @@ public class InteractiveModelOS extends Application {
         shared.setCreator("StartStop");
         shared.setFreed("-");
         shared.setOwned("Potentially owned by multiple JGs");
-        //temp = new ArrayList<>();
-        //temp.add("StartStop");
-        //shared.setWP(temp);
         sch.resList.add(shared);
         
         Resource uin = new Resource("UserInput");
         uin.setCreator("StartStop");
         uin.setFreed("-");
         uin.setOwned("IData");
-        //temp = new ArrayList<>();
-        //temp.add("StartStop");
-        //mosend.setWP(temp);
         sch.resList.add(uin);
         
         Resource uout = new Resource("UserOutput");
         uout.setCreator("StartStop");
         uout.setFreed("-");
         uout.setOwned("OData");
-        //temp = new ArrayList<>();
-        //temp.add("StartStop");
-        //mosend.setWP(temp);
         sch.resList.add(uout);
         
         Resource inreq = new Resource("InputRequest");
@@ -994,9 +860,6 @@ public class InteractiveModelOS extends Application {
         shmc.setCreator("StartStop");
         shmc.setFreed("-");
         shmc.setOwned("-");
-        //temp = new ArrayList<>();
-        //temp.add("Interrupt");
-        //interrupt.setWP(temp);
         sch.resList.add(shmc);
         
         Resource uiload = new Resource("UILoad");
@@ -1038,11 +901,6 @@ public class InteractiveModelOS extends Application {
         processes.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Process>(){
             @Override
             public void changed(ObservableValue<? extends Process> observable, Process oldValue, Process newValue) {
-                /*try {
-                    if (resources.getSelectionModel().getSelectedIndex() != -1){
-                        resources.getSelectionModel().clearSelection();
-                    }
-                } catch(IndexOutOfBoundsException ex){}*/
                 procInfo.setText(newValue.getAllValues());
             }
         });
@@ -1050,11 +908,6 @@ public class InteractiveModelOS extends Application {
         resources.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Resource>(){
             @Override
             public void changed(ObservableValue<? extends Resource> observable, Resource oldValue, Resource newValue) {
-                /*try {
-                    if (processes.getSelectionModel().getSelectedIndex() != -1){
-                        processes.getSelectionModel().clearSelection();
-                    }
-                } catch(IndexOutOfBoundsException ex){}*/
                 resInfo.setText(newValue.getAllValues());
             }
         });
